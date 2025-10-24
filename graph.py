@@ -12,4 +12,4 @@ def simple_graph(positions, name = "simple_graph"):
     plt.plot(x, y, linewidth = 0.3)
     plt.gca().axes.get_xaxis().set_visible(False)
     plt.gca().axes.get_yaxis().set_visible(False)
-    plt.savefig(name + ".png", dpi=300, bbox_inches='tight')
+    plt.savefig("plots/" + name + ".png", dpi=300, bbox_inches='tight')

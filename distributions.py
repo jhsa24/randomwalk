@@ -6,6 +6,29 @@ import random
 import matplotlib.pyplot as plt
 import math
 
+
+def pmf(prob_dict):
+    total = 0
+    for value in prob_dict:
+        total += prob_dict[value]
+    
+    prob_dict = {value: prob_dict[value] / total for value in prob_dict.keys()}
+    values = list(prob_dict.keys())
+    cumulative = [0]
+    
+    for value in prob_dict:
+        cumulative.append(prob_dict[value] + cumulative[-1])
+    
+    def sample():
+        r = random.random()
+        for i in range(len(values)):
+            if cumulative[i] < r < cumulative[i+1]:
+                return values[i]
+        return values[-1]
+    return sample
+
+
+"""
 y = [random.random() for i in range(50000)]
 
 
@@ -36,3 +59,4 @@ for b in bins:
     bin_mid.append(0.5 * (b[0] + b[1]))
 
 plt.plot(bin_mid, counts)
+"""
