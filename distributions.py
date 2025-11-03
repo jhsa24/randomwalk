@@ -27,12 +27,15 @@ def pmf(prob_dict):
         return values[-1]
     return sample
 
+def cauchy(location, spread):
+    def sample():
+        r = random.random()
+        return spread * math.tan( math.pi *(r-0.5) ) + location
+    return sample
 
-"""
-y = [random.random() for i in range(50000)]
 
 
-y = [math.tan( math.pi*(i-0.5)) for i in y]
+y = [cauchy(0,1)() for _ in range(500)]
 
 y = sorted(y)
 
@@ -58,5 +61,4 @@ for b in bins:
     counts.append(count)
     bin_mid.append(0.5 * (b[0] + b[1]))
 
-plt.plot(bin_mid, counts)
-"""
+#plt.plot(bin_mid, counts)

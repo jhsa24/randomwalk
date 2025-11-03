@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 
 from aux import mean
 from graph import simple_graph_1d, simple_graph_2d
-from distributions import pmf
+from distributions import pmf, cauchy
 
 class Particle:
     def __init__(self, position, angle):
@@ -86,7 +86,7 @@ class RandomWalk:
         plt.ylabel("Frequency")
         plt.title(f"Distribution of positions reached by {num_walks} 1d random walks")
     
-    def graph_MSD_1d(self, num_steps, num_walks, name = None, lw = 1):
+    def __graph_MSD_1d(self, num_steps, num_walks, name = None, lw = 1):
         list_of_walks, list_of_averages = [], []
         for _ in range(num_walks):
             list_of_walks.append(self.get_walk(num_steps))
@@ -103,7 +103,7 @@ class RandomWalk:
             plt.savefig("plots/" + name + ".png", dpi=300, bbox_inches='tight')
         else: plt.show()
     
-    def graph_MSD_2d(self, num_steps, num_walks, name = None, lw = 1):
+    def __graph_MSD_2d(self, num_steps, num_walks, name = None, lw = 1):
         list_of_walks, list_of_averages = [], []
         for _ in range(num_walks):
             list_of_walks.append(self.get_walk(num_steps))
@@ -131,7 +131,10 @@ class RandomWalk:
     
     def graph_MSD(self, num_steps, num_walks, name = None, lw = 1):
         if self.dimension == 1:
-            pass
+            self.__graph_MSD_1d(num_steps, num_walks, name, lw)
+        if self.dimension == 2:
+            self.__graph_MSD_2d(num_steps, num_walks, name, lw)
+            
     
     
 walker = RandomWalk(1, step_dist = pmf({-1:1, 1:1}))
@@ -161,8 +164,9 @@ distances = []
 for position in basic_walk:
     distances.append((position[0]**2 + position[1]**2) ** 1/2)
 """
-RW = RandomWalk()
+RW = RandomWalk(2, step_dist = lambda : 1, angle_dist = cauchy(0,1))
 
-RW.graph_MSD_2d(50, 200)
+RW.graph_walk(500, lw=0.5)
+#RW.graph_MSD(100, 200)
 
 
