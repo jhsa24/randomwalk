@@ -51,11 +51,30 @@ class RandomWalk:
         
         return positions    
     
+    def __graph_walk_1d(self, num_steps, name = None, lw = 0.5):
+        plt.plot(self.get_walk(num_steps), linewidth = lw)
+        plt.gca().axes.get_xaxis().set_visible(False)
+        plt.gca().axes.get_yaxis().set_visible(False)
+        plt.title(f"1d walk of length {num_steps}")
+        if name:
+            plt.savefig("plots/" + name + ".png", dpi=300, bbox_inches='tight')
+        else: plt.show()
+        
+    def __graph_walk_2d(self, num_steps, name = None, lw = 0.5):
+        x, y = zip(*self.get_walk(num_steps))
+        plt.plot(x, y, linewidth = lw)
+        plt.gca().axes.get_xaxis().set_visible(False)
+        plt.gca().axes.get_yaxis().set_visible(False)
+        plt.title(f"2d walk of length {num_steps}")
+        if name:
+            plt.savefig("plots/" + name + ".png", dpi=300, bbox_inches='tight')
+        else: plt.show()
+    
     def graph_walk(self, num_steps, name = None, lw = 0.5):
         if self.dimension == 1:
-            simple_graph_1d(self.get_walk(num_steps), name, lw)
+            self.__graph_walk_1d(num_steps, name, lw)
         if self.dimension == 2:
-            simple_graph_2d(self.get_walk(num_steps), name, lw)
+            self.__graph_walk_2d(num_steps, name, lw)
     
     def graph_walks(self, num_steps, num_walks, name = None, lw = 0.5):
         if self.dimension == 1:
@@ -85,6 +104,9 @@ class RandomWalk:
         plt.xlabel(f"Position of walker after {num_steps} steps")
         plt.ylabel("Frequency")
         plt.title(f"Distribution of positions reached by {num_walks} 1d random walks")
+        if name:
+            plt.savefig("plots/" + name + ".png", dpi=300, bbox_inches='tight')
+        else: plt.show()
     
     def __graph_MSD_1d(self, num_steps, num_walks, name = None, lw = 1):
         list_of_walks, list_of_averages = [], []
@@ -112,14 +134,6 @@ class RandomWalk:
             positions = [list_of_walks[i][t] for i in range(num_walks)]
             distances_squared = [pos[0]**2 + pos[1]**2 for pos in positions]
             list_of_averages.append(mean(distances_squared))
-            """
-            if t%3 == 0:
-                print(f" TIME: {t}")
-                print(f"positions: {positions}")
-                print(f"distances: {distances_squared}")
-                print(f"mean: {mean(distances_squared)}")
-                print()
-            """
         
         plt.plot(list_of_averages, linewidth = lw)
         plt.xlabel("Number of steps")
@@ -135,9 +149,6 @@ class RandomWalk:
         if self.dimension == 2:
             self.__graph_MSD_2d(num_steps, num_walks, name, lw)
             
-    
-    
-walker = RandomWalk(1, step_dist = pmf({-1:1, 1:1}))
  
 def random_walk_1d(length, step_dist):
     position = 0
@@ -164,9 +175,11 @@ distances = []
 for position in basic_walk:
     distances.append((position[0]**2 + position[1]**2) ** 1/2)
 """
-RW = RandomWalk(2, step_dist = lambda : 1, angle_dist = cauchy(0,1))
+RW = RandomWalk(2, step_dist = lambda : random.random(), angle_dist = lambda : random.random() - 0.5 )
 
-RW.graph_walk(500, lw=0.5)
-#RW.graph_MSD(100, 200)
+#RW.graph_walk(200, lw=0.75, name = "17 - 2d uniform walk")
+#RW.graph_walks(100, 3, lw=0.8, name = "04 - 1d skewed walks")
+RW.graph_MSD(500, 200, name = "20 - 2d uniform mean squared displacement")
+#RW.graph_distribution_1d(100, 1000, -15, 65, name = "05 - 1d skewed position distrubution")
 
 
