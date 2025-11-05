@@ -11,8 +11,6 @@ import math
 import matplotlib.pyplot as plt
 
 from aux import mean
-from graph import simple_graph_1d, simple_graph_2d
-from distributions import pmf, cauchy
 
 class Particle:
     def __init__(self, position, angle):
@@ -58,6 +56,7 @@ class RandomWalk:
         plt.title(f"1d walk of length {num_steps}")
         if name:
             plt.savefig("plots/" + name + ".png", dpi=300, bbox_inches='tight')
+            plt.show()
         else: plt.show()
         
     def __graph_walk_2d(self, num_steps, name = None, lw = 0.5):
@@ -68,6 +67,7 @@ class RandomWalk:
         plt.title(f"2d walk of length {num_steps}")
         if name:
             plt.savefig("plots/" + name + ".png", dpi=300, bbox_inches='tight')
+            plt.show()
         else: plt.show()
     
     def graph_walk(self, num_steps, name = None, lw = 0.5):
@@ -85,6 +85,7 @@ class RandomWalk:
             plt.title(f"{num_walks} 1d random walks")
             if name:
                 plt.savefig("plots/" + name + ".png", dpi=300, bbox_inches='tight')
+                plt.show()
             else: plt.show()
     
     def graph_distribution_1d(self, num_steps, num_walks, axis_min, axis_max, name = None, lw = 1):
@@ -106,6 +107,7 @@ class RandomWalk:
         plt.title(f"Distribution of positions reached by {num_walks} 1d random walks")
         if name:
             plt.savefig("plots/" + name + ".png", dpi=300, bbox_inches='tight')
+            plt.show()
         else: plt.show()
     
     def __graph_MSD_1d(self, num_steps, num_walks, name = None, lw = 1):
@@ -123,6 +125,7 @@ class RandomWalk:
         plt.title(f"MSD of {num_walks} 1d random walks")
         if name:
             plt.savefig("plots/" + name + ".png", dpi=300, bbox_inches='tight')
+            plt.show()
         else: plt.show()
     
     def __graph_MSD_2d(self, num_steps, num_walks, name = None, lw = 1):
@@ -141,6 +144,7 @@ class RandomWalk:
         plt.title(f"MSD of {num_walks} 2d random walks")
         if name:
             plt.savefig("plots/" + name + ".png", dpi=300, bbox_inches='tight')
+            plt.show()
         else: plt.show()
     
     def graph_MSD(self, num_steps, num_walks, name = None, lw = 1):
@@ -148,38 +152,3 @@ class RandomWalk:
             self.__graph_MSD_1d(num_steps, num_walks, name, lw)
         if self.dimension == 2:
             self.__graph_MSD_2d(num_steps, num_walks, name, lw)
-            
- 
-def random_walk_1d(length, step_dist):
-    position = 0
-    positions = [0]
-    for _ in range(length - 1):
-        position += step_dist()
-        positions.append(position)
-    return positions
-    
-def random_walk_2d(length, step_dist, angle_dist):
-    walker = Particle((0,0), 0)
-    positions = [(0,0)]
-    for _ in range(length):
-        walker.move(step_dist())
-        walker.rotate(angle_dist())
-        positions.append(walker.position)
-    return positions
-
-"""
-basic_walk = random_walk_2d(1000, lambda: 1, lambda: random.choice([math.pi * i/2 for i in range(4)]))
-simple_graph(basic_walk)
-
-distances = []
-for position in basic_walk:
-    distances.append((position[0]**2 + position[1]**2) ** 1/2)
-"""
-RW = RandomWalk(2, step_dist = lambda : random.random(), angle_dist = lambda : random.random() - 0.5 )
-
-#RW.graph_walk(200, lw=0.75, name = "17 - 2d uniform walk")
-#RW.graph_walks(100, 3, lw=0.8, name = "04 - 1d skewed walks")
-RW.graph_MSD(500, 200, name = "20 - 2d uniform mean squared displacement")
-#RW.graph_distribution_1d(100, 1000, -15, 65, name = "05 - 1d skewed position distrubution")
-
-
