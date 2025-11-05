@@ -18,8 +18,8 @@ class Particle:
         self.angle = angle
     
     def move(self, distance):
-        new_x = distance * math.sin(self.angle) + self.position[0]
-        new_y = distance * math.cos(self.angle) + self.position[1]
+        new_x = distance * math.cos(self.angle) + self.position[0]
+        new_y = distance * math.sin(self.angle) + self.position[1]
         self.position = (new_x, new_y)
         
     def rotate(self, angle):
@@ -43,7 +43,8 @@ class RandomWalk:
             self.particle.position = (0,0)
             positions.append(self.particle.position)
             for _ in range(num_steps):
-                self.particle.rotate(self.angle_dist())
+                #self.particle.rotate(self.angle_dist())
+                self.particle.angle = self.angle_dist()
                 self.particle.move(self.step_dist())
                 positions.append(self.particle.position)
         
@@ -115,7 +116,7 @@ class RandomWalk:
         for _ in range(num_walks):
             list_of_walks.append(self.get_walk(num_steps))
         
-        for t in range(num_steps):
+        for t in range(num_steps + 1):
             positions_squared = [abs(list_of_walks[i][t])**2 for i in range(num_walks)]
             list_of_averages.append(mean(positions_squared))
         
@@ -133,7 +134,7 @@ class RandomWalk:
         for _ in range(num_walks):
             list_of_walks.append(self.get_walk(num_steps))
         
-        for t in range(num_steps):
+        for t in range(num_steps + 1):
             positions = [list_of_walks[i][t] for i in range(num_walks)]
             distances_squared = [pos[0]**2 + pos[1]**2 for pos in positions]
             list_of_averages.append(mean(distances_squared))
@@ -152,3 +153,46 @@ class RandomWalk:
             self.__graph_MSD_1d(num_steps, num_walks, name, lw)
         if self.dimension == 2:
             self.__graph_MSD_2d(num_steps, num_walks, name, lw)
+            
+    """def __graph_MD_1d(self, num_steps, num_walks, name = None, lw = 1):
+        list_of_walks, list_of_averages = [], []
+        for _ in range(num_walks):
+            list_of_walks.append(self.get_walk(num_steps))
+        
+        for t in range(num_steps + 1):
+            positions = [list_of_walks[i][t] for i in range(num_walks)]
+            list_of_averages.append(mean(positions))
+        
+        plt.plot(list_of_averages, linewidth = lw)
+        plt.xlabel("Number of steps")
+        plt.ylabel("Mean Distance")
+        plt.title(f"MD of {num_walks} 1d random walks")
+        if name:
+            plt.savefig("plots/" + name + ".png", dpi=300, bbox_inches='tight')
+            plt.show()
+        else: plt.show()
+        
+    def __graph_MD_2d(self, num_steps, num_walks, name = None, lw = 1):
+        list_of_walks, list_of_averages = [], []
+        for _ in range(num_walks):
+            list_of_walks.append(self.get_walk(num_steps))
+        
+        for t in range(num_steps + 1):
+            positions = [list_of_walks[i][t] for i in range(num_walks)]
+            distances = [(pos[0]**2 + pos[1]**2) ** 1/2 for pos in positions]
+            list_of_averages.append(mean(distances))
+        
+        plt.plot(list_of_averages, linewidth = lw)
+        plt.xlabel("Number of steps")
+        plt.ylabel("Mean Distance")
+        plt.title(f"MD of {num_walks} 2d random walks")
+        if name:
+            plt.savefig("plots/" + name + ".png", dpi=300, bbox_inches='tight')
+            plt.show()
+        else: plt.show()
+    
+    def graph_MD(self, num_steps, num_walks, name = None, lw = 1):
+        if self.dimension == 1:
+            self.__graph_MD_1d(num_steps, num_walks, name, lw)
+        if self.dimension == 2:
+            self.__graph_MD_2d(num_steps, num_walks, name, lw)"""

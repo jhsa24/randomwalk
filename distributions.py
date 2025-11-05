@@ -30,10 +30,14 @@ def pmf(prob_dict):
 def cauchy(location, spread):
     def sample():
         r = random.random()
-        return spread * math.tan( math.pi *(r-0.5) ) + location
+        return spread * math.tan( math.pi * (r-0.5) ) + location
     return sample
 
-
+def uniform(start, end):
+    def sample():
+        r = random.random()
+        return start + (end - start) * r
+    return sample
 
 y = [cauchy(0,1)() for _ in range(500)]
 
