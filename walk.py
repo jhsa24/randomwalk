@@ -43,8 +43,8 @@ class RandomWalk:
             self.particle.position = (0,0)
             positions.append(self.particle.position)
             for _ in range(num_steps):
-                #self.particle.rotate(self.angle_dist())
-                self.particle.angle = self.angle_dist()
+                self.particle.rotate(self.angle_dist())
+                #self.particle.angle = self.angle_dist()
                 self.particle.move(self.step_dist())
                 positions.append(self.particle.position)
         
@@ -89,20 +89,32 @@ class RandomWalk:
                 plt.show()
             else: plt.show()
     
-    def graph_distribution_1d(self, num_steps, num_walks, axis_min, axis_max, name = None, lw = 1):
+    def graph_distribution_1d(self, num_steps, num_walks, axis_min, axis_max, bin_number, name = None, lw = 1):
         final_positions = []
         num_iter = int(num_walks / 2)
-        frequency_dict = {n:0 for n in range(axis_min, axis_max)}
         
         for i in range(num_iter):
             final_positions.append(self.get_walk(num_steps)[-1])
             final_positions.append(self.get_walk(num_steps + 1)[-1])
         
-        for position in final_positions:
-            if position in frequency_dict:
-                frequency_dict[position] += 1
+        bin_width = (axis_max - axis_min) / bin_number
+        bins = [(axis_min, axis_min + bin_width)]
+        
+        for i in range(bin_number - 1):
+            bin_start = bins[i][1]
+            bin_end = bin_start + bin_width
+            bins.append((bin_start, bin_end))
+        
+        count_dict = {}
+        
+        for b in bins:
+            count = 0
+            for num in final_positions:
+                if b[0] <= num < b[1]:
+                    count += 1
+                count_dict[0.5 * (b[0]+b[1])] = count
                 
-        plt.plot(frequency_dict.keys(), frequency_dict.values(), linewidth = lw)
+        plt.plot(count_dict.keys(), count_dict.values(), linewidth = lw)
         plt.xlabel(f"Position of walker after {num_steps} steps")
         plt.ylabel("Frequency")
         plt.title(f"Distribution of positions reached by {num_walks} 1d random walks")
