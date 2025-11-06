@@ -33,11 +33,23 @@ def cauchy(location, spread):
         return spread * math.tan( math.pi * (r-0.5) ) + location
     return sample
 
+def exponential(scale):
+    def sample():
+        r = random.random()
+        return - (math.log(r)) / scale
+    return sample
+
+def normal(mean, variance):
+    return lambda : random.normalvariate(mean, variance)
+
 def uniform(start, end):
     def sample():
         r = random.random()
         return start + (end - start) * r
     return sample
+
+
+
 
 def graph_pdf_from_sample(pdf, sample_size, axis_min, axis_max, bin_number, name = None):
     sample = [pdf() for _ in range(sample_size)]
@@ -69,6 +81,5 @@ def graph_pdf_from_sample(pdf, sample_size, axis_min, axis_max, bin_number, name
         plt.savefig("plots/" + name + ".png", dpi=300, bbox_inches='tight')
         plt.show()
     else: plt.show()
-       
     
-graph_pdf_from_sample(cauchy(1,1), 50000, -8, 8, 200)
+graph_pdf_from_sample(normal(0,1), 50000, -5, 5, 120)
