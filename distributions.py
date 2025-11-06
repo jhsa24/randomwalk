@@ -39,30 +39,36 @@ def uniform(start, end):
         return start + (end - start) * r
     return sample
 
-y = [cauchy(0,1)() for _ in range(500)]
-
-y = sorted(y)
-
-interval = [-6,6]
-bin_number = 50
-
-bin_width = (interval[1] - interval[0]) / bin_number
-
-bins = [(interval[0], interval[0] + bin_width)]
-bin_mid = []
-counts = []
-for i in range(bin_number - 1):
-    bin_start = bins[i][1]
-    bin_end = bin_start + bin_width
-    bins.append((bin_start, bin_end))
+def graph_pdf_from_sample(pdf, sample_size, axis_min, axis_max, bin_number, name = None):
+    sample = [pdf() for _ in range(sample_size)]
     
-
-for b in bins:
-    count = 0
-    for num in y:
-        if b[0] < num < b[1]:
-            count += 1
-    counts.append(count)
-    bin_mid.append(0.5 * (b[0] + b[1]))
-
-#plt.plot(bin_mid, counts)
+    
+    bin_width = (axis_max - axis_min) / bin_number
+    bins = [(axis_min, axis_min + bin_width)]
+    
+    for i in range(bin_number - 1):
+        bin_start = bins[i][1]
+        bin_end = bin_start + bin_width
+        bins.append((bin_start, bin_end))
+    
+    count_dict = {}
+    
+    for b in bins:
+        count = 0
+        for num in sample:
+            if b[0] <= num < b[1]:
+                count += 1
+            count_dict[0.5 * (b[0]+b[1])] = count
+    
+    plt.plot(count_dict.keys(), count_dict.values())
+    plt.xlabel("Sample value")
+    plt.ylabel("Value frequency")
+    plt.title(f"Distribution of {sample_size} sample points")
+    
+    if name:
+        plt.savefig("plots/" + name + ".png", dpi=300, bbox_inches='tight')
+        plt.show()
+    else: plt.show()
+       
+    
+graph_pdf_from_sample(cauchy(1,1), 50000, -8, 8, 200)
