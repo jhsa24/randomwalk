@@ -13,9 +13,10 @@ import matplotlib.pyplot as plt
 from aux import mean
 
 class Particle:
-    def __init__(self, position, angle):
+    def __init__(self, position, angle, iteration = 0):
         self.position = position
-        self.angle = angle
+        self.angle = angle % (2 * math.pi)
+        self.iteration = iteration
     
     def move(self, distance):
         new_x = distance * math.cos(self.angle) + self.position[0]
@@ -23,7 +24,10 @@ class Particle:
         self.position = (new_x, new_y)
         
     def rotate(self, angle):
-        self.angle += angle
+        self.angle += angle % (2 * math.pi)
+        
+    def describe(self):
+        print(f"Particle at position {self.position} with angle {self.angle} after {self.iteration} iterations")
         
 class RandomWalk:
     def __init__(self, dimension = 2, step_dist = lambda: 1, angle_dist = lambda: random.choice([math.pi * i/2 for i in range(4)])):

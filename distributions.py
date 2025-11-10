@@ -50,7 +50,6 @@ def uniform(start, end):
 
 
 
-
 def graph_pdf_from_sample(pdf, sample_size, axis_min, axis_max, bin_number, name = None):
     sample = [pdf() for _ in range(sample_size)]
     
@@ -82,4 +81,4 @@ def graph_pdf_from_sample(pdf, sample_size, axis_min, axis_max, bin_number, name
         plt.show()
     else: plt.show()
     
-graph_pdf_from_sample(normal(0,1), 50000, -5, 5, 120)
+#graph_pdf_from_sample(cauchy(0,1), 10000, -5, 5, 50)

@@ -1,12 +1,29 @@
 from walk import RandomWalk
-from distributions import cauchy, pmf, uniform
+from distributions import cauchy, pmf, uniform, exponential, normal
+from brw_test import BranchingRandomWalk
 
+import random
 import math
 
 
-RW = RandomWalk(step_dist = lambda: 1, angle_dist = uniform(- math.pi/10, math.pi / 8) )#pmf({i * math.pi/2 : 1 for i in range(4)}) )
+RW = RandomWalk(
+    step_dist = lambda: 1, 
+    angle_dist = pmf({i * math.pi/2 : 1 for i in range(4)}) )
 
-RW.graph_walk(1000, lw=0.75)
+RW.graph_walk(200, lw=0.75)
 #RW.graph_walks(100, 3, lw=0.8, name = "04 - 1d skewed walks")
-RW.graph_MSD(1000, 200)
+#RW.graph_MSD(200, 200)
 #RW.graph_distribution_1d(500, 1000, -50, 50, 50)
+
+        
+BRW = BranchingRandomWalk(
+    step_dist = cauchy(0,1),
+    angle_dist = pmf({i * math.pi/2 : 1 for i in range(4)}), 
+    branch_angle_dist = lambda : math.pi/2,
+    branch_waiting_dist = exponential(1/10)
+    )
+BRW = BranchingRandomWalk()
+
+branching_walk = BRW.get_branching_walk_v2(20)
+
+BRW.graph_walk(30, "Branching Random Walk")
