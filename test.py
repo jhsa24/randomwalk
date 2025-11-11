@@ -1,6 +1,10 @@
+"""
+Testing ground for random walks
+"""
+
 from walk import RandomWalk
 from distributions import cauchy, pmf, uniform, exponential, normal
-from brw_test import BranchingRandomWalk
+from brw import BranchingRandomWalk
 
 import random
 import math
@@ -17,13 +21,13 @@ RW = RandomWalk(
 
         
 BRW = BranchingRandomWalk(
-    step_dist = cauchy(0,1),
-    angle_dist = pmf({i * math.pi/2 : 1 for i in range(4)}), 
-    branch_angle_dist = lambda : math.pi/2,
-    branch_waiting_dist = exponential(1/10)
+    step_dist = uniform(0,3),
+    angle_dist = normal(0,1/5), 
+    branch_angle_dist = uniform(math.pi/5, math.pi/3),
+    branch_waiting_dist = exponential(1/15)
     )
-BRW = BranchingRandomWalk()
+
 
 BRW.graph_walk(50, name = "Branching Random Walk")
 
-#branching_walk_v3 = BRW.get_branching_walk_v3(20)
+

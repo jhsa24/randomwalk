@@ -7,10 +7,11 @@ Created on Fri Nov  7 10:21:41 2025
 """
 
 from walk import Particle
-from distributions import uniform, exponential, cauchy
+from distributions import uniform, exponential
 import math
 import matplotlib.pyplot as plt
-import random
+
+
 
 class BranchingRandomWalk:
     def __init__(self, 
@@ -27,6 +28,7 @@ class BranchingRandomWalk:
         self.branch_angle_dist = branch_angle_dist
         self.list_of_walkers = []
         
+    #performs simple random walk, returns list of positions
     def get_walk(self, walker, num_steps):
         positions = [walker.position]
         for _ in range(num_steps):
@@ -35,69 +37,47 @@ class BranchingRandomWalk:
             walker.iteration += 1
             positions.append(walker.position)
         return positions
-    
+ 
+    #performs branching walk on a per-branch level, not iteratively    
     def get_branching_walk_v1(self, num_steps):
-        list_of_branches = []
-        self.list_of_walkers = [Particle((0,0), 0)]
-        walker = self.list_of_walkers[0]
-        branch_time = round(self.branch_waiting_dist())
-        list_of_branches.append(self.get_walk(walker, branch_time))
-        
-        list_of_walkers = []
-        list_of_walkers.append(Particle(walker.position, 
-                                        walker.angle - math.pi / 3, 
-                                        walker.iteration))
-        walker.rotate(math.pi / 3)
-        list_of_walkers.append(walker)
-        
-        for w in list_of_walkers:
-            branch_time = round(self.branch_waiting_dist())
-            list_of_branches.append(self.get_walk(w, branch_time))
-        
-        return list_of_branches
-        
-    def get_branching_walk_v2(self, num_steps):
         list_of_branches = []
         self.list_of_walkers = [Particle((0,0), 0)]
         
         while self.list_of_walkers:
+            #run for loop over a copy of walkers list
             current_walkers = self.list_of_walkers.copy()
             for w in current_walkers:
+                #calculate how long before branch happens
                 branch_time = round(self.branch_waiting_dist())
-                #Debug!
-                print("--- New Branch Starting ---")
-                print(f"Current number of branches: {len(current_walkers)}")
-                print(f"Current walker at position {current_walkers.index(w)} in list")
-                w.describe()
-                print(f"Branch time: {branch_time}")
-                
+                #perform a shorter walk if we hit the max allowed number of steps
                 if w.iteration + branch_time >= num_steps:
-                    print("=============================")
-                    print(f"END OF ITERATIONS ALONG BRANCH. Final branch {num_steps - w.iteration} long")
                     list_of_branches.append(self.get_walk(w, num_steps - w.iteration))
                     self.list_of_walkers.remove(w)
-                    print(f"final number of iterations: {w.iteration}")
-                    print("=============================")
                     continue
-            
+                #otherwise, perform full walk, and then branch
                 list_of_branches.append(self.get_walk(w, branch_time))
-                angle = self.branch_angle_dist()
+                #prevent this walker being re-iterated over
                 self.list_of_walkers.remove(w)
+                angle = self.branch_angle_dist()
+                #create two new walkers to iterate over in next for loop
                 self.list_of_walkers.append(Particle(w.position, w.angle - angle, w.iteration))
                 self.list_of_walkers.append(Particle(w.position, w.angle + angle, w.iteration))
                 
-                print("--- Branch Ending ---")
-                w.describe()
-        
+              
         return list_of_branches
     
-    def get_branching_walk_v3(self, num_steps):
+    #performs the same walk as above, but now with an iterative approach
+    def get_branching_walk_v2(self, num_steps):
         positions = []
+        #dictionary keeps track of all active tips, how long they travel before branching,
+        #and the trajectory it has taken so far
         walker_dict = {Particle((0,0), 0): 
                       [round(self.branch_waiting_dist()), [(0,0)] ]}
+        
         iteration = 0
         
         while iteration < num_steps:
+            #create copy of active walkers, ready to loop over
             current_walkers = walker_dict.copy()
             print("===========================")
             print(f"Current iteration: {iteration}")
@@ -105,18 +85,19 @@ class BranchingRandomWalk:
             print("===========================")
             
             for w in current_walkers:
-                print(walker_dict[w][0])    
+                #if branching point not yet reached, jump one step
                 if w.iteration < walker_dict[w][0]:
                     w.rotate(self.angle_dist())
                     w.move(self.step_dist())
                     w.iteration += 1
                     walker_dict[w][1].append(w.position)
-                    print(f"{w} moved")
                     continue
-                
+                #otherwise, append branch's entire trajectory to list
                 positions.append(walker_dict[w][1])
+                #remove walker from dictionary since not active
                 walker_dict.pop(w)
                 angle = self.branch_angle_dist()
+                #add two new walkers, these are the child walkers of branching process
                 walker_dict[Particle(w.position, w.angle + angle)] = [
                     round(self.branch_waiting_dist()), [w.position] ]
                 walker_dict[Particle(w.position, w.angle - angle)] = [
@@ -124,6 +105,7 @@ class BranchingRandomWalk:
             
             iteration += 1
         
+        #append all 'unfinished' branches to list
         for w in walker_dict:
             positions.append(walker_dict[w][1])
         
