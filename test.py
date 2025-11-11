@@ -24,4 +24,6 @@ BRW = BranchingRandomWalk(
     )
 BRW = BranchingRandomWalk()
 
-branching_walk_v3 = BRW.get_branching_walk_v3(20)
+BRW.graph_walk(50, name = "Branching Random Walk")
+
+#branching_walk_v3 = BRW.get_branching_walk_v3(20)

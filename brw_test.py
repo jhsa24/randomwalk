@@ -93,11 +93,16 @@ class BranchingRandomWalk:
     
     def get_branching_walk_v3(self, num_steps):
         positions = []
-        walker_dict = {Particle((0,0), 0) : [round(self.branch_waiting_dist()), [] ]}
+        walker_dict = {Particle((0,0), 0): 
+                      [round(self.branch_waiting_dist()), [(0,0)] ]}
         iteration = 0
         
         while iteration < num_steps:
             current_walkers = walker_dict.copy()
+            print("===========================")
+            print(f"Current iteration: {iteration}")
+            print(f"Current walkers: {current_walkers}")
+            print("===========================")
             
             for w in current_walkers:
                 print(walker_dict[w][0])    
@@ -106,19 +111,26 @@ class BranchingRandomWalk:
                     w.move(self.step_dist())
                     w.iteration += 1
                     walker_dict[w][1].append(w.position)
+                    print(f"{w} moved")
                     continue
                 
                 positions.append(walker_dict[w][1])
                 walker_dict.pop(w)
                 angle = self.branch_angle_dist()
-                walker_dict[Particle(w.position, w.angle + angle)] = round(self.branch_waiting_dist())
-                walker_dict[Particle(w.position, w.angle - angle)] = round(self.branch_waiting_dist())
+                walker_dict[Particle(w.position, w.angle + angle)] = [
+                    round(self.branch_waiting_dist()), [w.position] ]
+                walker_dict[Particle(w.position, w.angle - angle)] = [
+                    round(self.branch_waiting_dist()), [w.position] ]
             
             iteration += 1
+        
+        for w in walker_dict:
+            positions.append(walker_dict[w][1])
+        
         return positions
     
     def graph_walk(self, num_steps, name = None, lw = 0.75):
-        branching_walk = self.get_branching_walk_v2(num_steps)
+        branching_walk = self.get_branching_walk_v3(num_steps)
         
         for branch in branching_walk:
             x, y = zip(*branch)
