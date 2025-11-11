@@ -81,4 +81,4 @@ def graph_pdf_from_sample(pdf, sample_size, axis_min, axis_max, bin_number, name
         plt.show()
     else: plt.show()
     
-#graph_pdf_from_sample(cauchy(0,1), 10000, -5, 5, 50)
+#graph_pdf_from_sample(cauchy(0,1), 100000, -5, 5, 50)

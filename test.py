@@ -10,7 +10,7 @@ RW = RandomWalk(
     step_dist = lambda: 1, 
     angle_dist = pmf({i * math.pi/2 : 1 for i in range(4)}) )
 
-RW.graph_walk(200, lw=0.75)
+#RW.graph_walk(200, lw=0.75)
 #RW.graph_walks(100, 3, lw=0.8, name = "04 - 1d skewed walks")
 #RW.graph_MSD(200, 200)
 #RW.graph_distribution_1d(500, 1000, -50, 50, 50)
@@ -24,6 +24,4 @@ BRW = BranchingRandomWalk(
     )
 BRW = BranchingRandomWalk()
 
-branching_walk = BRW.get_branching_walk_v2(20)
-
-BRW.graph_walk(30, "Branching Random Walk")
+branching_walk_v3 = BRW.get_branching_walk_v3(20)

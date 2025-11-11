@@ -17,7 +17,7 @@ class BranchingRandomWalk:
                  dimension = 2, 
                  step_dist = lambda : 1, 
                  angle_dist = uniform(-math.pi/5, math.pi/5), 
-                 branch_waiting_dist = exponential(1/8),
+                 branch_waiting_dist = exponential(1/15),
                  branch_angle_dist = lambda : math.pi / 3):
                 
         self.dimension = dimension
@@ -66,8 +66,8 @@ class BranchingRandomWalk:
                 branch_time = round(self.branch_waiting_dist())
                 #Debug!
                 print("--- New Branch Starting ---")
-                print(f"Current number of branches: {len(self.list_of_walkers)}")
-                print(f"Current walker at position {self.list_of_walkers.index(w)} in list")
+                print(f"Current number of branches: {len(current_walkers)}")
+                print(f"Current walker at position {current_walkers.index(w)} in list")
                 w.describe()
                 print(f"Branch time: {branch_time}")
                 
@@ -91,6 +91,32 @@ class BranchingRandomWalk:
         
         return list_of_branches
     
+    def get_branching_walk_v3(self, num_steps):
+        positions = []
+        walker_dict = {Particle((0,0), 0) : [round(self.branch_waiting_dist()), [] ]}
+        iteration = 0
+        
+        while iteration < num_steps:
+            current_walkers = walker_dict.copy()
+            
+            for w in current_walkers:
+                print(walker_dict[w][0])    
+                if w.iteration < walker_dict[w][0]:
+                    w.rotate(self.angle_dist())
+                    w.move(self.step_dist())
+                    w.iteration += 1
+                    walker_dict[w][1].append(w.position)
+                    continue
+                
+                positions.append(walker_dict[w][1])
+                walker_dict.pop(w)
+                angle = self.branch_angle_dist()
+                walker_dict[Particle(w.position, w.angle + angle)] = round(self.branch_waiting_dist())
+                walker_dict[Particle(w.position, w.angle - angle)] = round(self.branch_waiting_dist())
+            
+            iteration += 1
+        return positions
+    
     def graph_walk(self, num_steps, name = None, lw = 0.75):
         branching_walk = self.get_branching_walk_v2(num_steps)
         
@@ -104,16 +130,5 @@ class BranchingRandomWalk:
         else: plt.show()
         
         
-BRW = BranchingRandomWalk(
-    angle_dist = lambda : random.choice([i * math.pi / 2 for i in range(4)]), 
-    branch_angle_dist = lambda : math.pi/2,
-    branch_waiting_dist = exponential(1/20)
-    )
-
-
-branching_walk_v1 = BRW.get_branching_walk_v1(20)
-branching_walk_v2 = BRW.get_branching_walk_v2(20)
-
-BRW.graph_walk(20)
         
 
