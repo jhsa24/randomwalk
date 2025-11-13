@@ -40,14 +40,14 @@ def pmf(prob_dict):
     #return sample function so that behaviour is same as random.random
     return sample
 
-#defines a cauchy pdf with inverse sampling
+#defines a cauchy pdf by inverse sampling
 def cauchy(location, spread):
     def sample():
         r = random.random()
         return spread * math.tan( math.pi * (r-0.5) ) + location
     return sample
 
-#defines an exponential pdf with inverse sampling
+#defines an exponential pdf by inverse sampling
 def exponential(scale):
     def sample():
         r = random.random()

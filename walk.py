@@ -27,7 +27,13 @@ class Particle:
         
     def rotate(self, angle):
         self.angle += angle % (2 * math.pi)
-        
+    
+    def __eq__(self, other):
+        return self is other
+    
+    def __hash__(self):
+        return id(self)
+    
     def describe(self):
         print(f"Particle at position {self.position} with angle {self.angle} after {self.iteration} iterations")
         

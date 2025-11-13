@@ -94,7 +94,7 @@ class BranchingRandomWalk:
                     continue
                 #otherwise, append branch's entire trajectory to list
                 positions.append(walker_dict[w][1])
-                #remove walker from dictionary since not active
+                #remove walker from dictionary since it is no longer active
                 walker_dict.pop(w)
                 angle = self.branch_angle_dist()
                 #add two new walkers, these are the child walkers of branching process
@@ -111,8 +111,82 @@ class BranchingRandomWalk:
         
         return positions
     
-    def graph_walk(self, num_steps, name = None, lw = 0.75):
-        branching_walk = self.get_branching_walk_v3(num_steps)
+    def get_anhilating_walk(self, num_steps, anhilation_radius):
+        positions = []
+        walker_list = [[Particle((0,0), 0), 
+                        round(self.branch_waiting_dist()), 
+                        [(0,0)]]]
+        iteration = 0
+        
+        while iteration < num_steps:
+            #create copy of active walkers, ready to loop over
+            current_walkers = walker_list.copy()
+            dead_walkers = []
+            print("===========================")
+            print(f"Current iteration: {iteration}")
+            print(f"Current walkers: {current_walkers}")
+            print("===========================")
+            
+            for w in current_walkers:
+                bt = w[1]
+                dead = False
+                #if walker is too close to a branch, make inactive
+                for branch in positions:
+                    for duct in branch:
+                        delta_x = w[0].position[0] - duct[0]
+                        delta_y = w[0].position[1] - duct[1]
+                        distance = round((delta_x**2 + delta_y**2) ** 0.5, 9)
+                        if 0 < distance < anhilation_radius:
+                            w[0].describe()
+                            positions.append(w[2])
+                            print(f"Walker List: {walker_list}")
+                            dead_walkers.append(w)
+                            dead = True
+                            break
+                        if dead:
+                            break
+                    if dead:
+                        continue
+                
+                #rest of code for active walkers
+                #if branching point not yet reached, jump one step
+                if w[0].iteration < bt:
+                    w[0].rotate(self.angle_dist())
+                    w[0].move(self.step_dist())
+                    w[0].iteration += 1
+                    w[2].append(w[0].position)
+                    continue
+                #otherwise, append branch's entire trajectory to list
+                positions.append(w[2])
+                #remove walker from dictionary since it is no longer active
+                dead_walkers.append(w)
+                angle = self.branch_angle_dist()
+                #add two new walkers, these are the child walkers of branching process
+                
+                walker_list.append([Particle(w[0].position, w[0].angle + angle),
+                                    round(self.branch_waiting_dist()),
+                                    [w[0].position]])
+                walker_list.append([Particle(w[0].position, w[0].angle - angle),
+                                    round(self.branch_waiting_dist()),
+                                    [w[0].position]])
+            
+            for w in dead_walkers:
+                if w in walker_list:
+                    walker_list.remove(w)
+            
+            iteration += 1
+        
+        #append all 'unfinished' branches to list
+        for w in walker_list:
+            positions.append(w[2])
+        
+        return positions
+        
+    
+    def graph_walk(self, num_steps, name = None, lw = 0.75, walk = None):
+        if walk:
+            branching_walk = walk
+        else:    branching_walk = self.get_branching_walk_v2(num_steps)
         
         for branch in branching_walk:
             x, y = zip(*branch)

@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Thu Oct 30 15:28:35 2025
-
-@author: msp25jha
+Various helper functions for the random walk simulations
+Currently a bit empty
 """
 
 def mean(lst):
