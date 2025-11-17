@@ -142,10 +142,10 @@ class BranchingRandomWalk:
                             dead_walkers.append(w)
                             dead = True
                             break
-                        if dead:
-                            break
                     if dead:
-                        continue
+                        break
+                if dead:
+                    continue
                 
                 #if branching point not yet reached, jump one step
                 if w[0].iteration < w[1]:
@@ -179,7 +179,73 @@ class BranchingRandomWalk:
             positions.append(w[2])
         
         return positions
-        
+    
+    def get_barw(self, num_steps, radius = 1):
+        walker_dict = {0:{"walker" : Particle((0,0),0),
+                          "branch_time" : self.branch_waiting_dist(),
+                          "dead" : False,
+                          "positions" : [(0,0)]
+                          }}
+        iteration = 1
+        while iteration < num_steps:
+            #print(f"Iteration number: {iteration}")
+            current_walkers = walker_dict.copy()
+            for i in current_walkers:
+                w = walker_dict[i]["walker"]
+                #skip inactive particles
+                if walker_dict[i]["dead"]:
+                    continue
+                #print(f"Looking at walker with index {i}")
+                #w.describe()
+                #print("=== Distance Checks ===")
+                
+                #test neighbor distance
+                for j in walker_dict:
+                    for pos in walker_dict[j]["positions"]:
+                        dx = w.position[0] - pos[0]
+                        dy = w.position[1] - pos[1]
+                        distance = round((dx**2 + dy**2) ** 0.5, 9)
+                        #print(w.position, pos, distance)
+                        
+                        #if too close, kill the walker and exit loop
+                        if 0 < distance < radius:
+                            walker_dict[i]["dead"] = True
+                            break
+                    if walker_dict[i]["dead"]:
+                        break
+                if walker_dict[i]["dead"]:
+                    continue
+            
+                #if branching doesn't occur, walk one step
+                if w.iteration < walker_dict[i]["branch_time"]:
+                    w.rotate(self.angle_dist())
+                    w.move(self.step_dist())
+                    w.iteration += 1
+                    walker_dict[i]["positions"].append(w.position)
+                    #print(f"Taking one more step to {w.position}")
+                    continue
+                #otherwise kill the walker and create two new ones
+                walker_dict[i]["dead"] = True
+                #calculate size of dictionary ready for new indices
+                size = len(walker_dict)
+                angle = self.branch_angle_dist()
+                walker_dict[size] = {"walker" : Particle(w.position, w.angle + angle),
+                                     "branch_time" : self.branch_waiting_dist(),
+                                     "dead" : False,
+                                     "positions" : [w.position]}
+                
+                walker_dict[size+1] = {"walker" : Particle(w.position, w.angle - angle),
+                                     "branch_time" : self.branch_waiting_dist(),
+                                     "dead" : False,
+                                     "positions" : [w.position]}
+                #print("Branching occuring, new dictionary:")
+                #print(walker_dict)
+            #print("================================")
+            iteration += 1
+            
+        positions = [walker_dict[i]["positions"] for i in walker_dict]
+        return positions 
+            
     
     def graph_walk(self, num_steps, name = None, lw = 0.75, walk = None):
         if walk:
@@ -189,7 +255,7 @@ class BranchingRandomWalk:
         for branch in branching_walk:
             x, y = zip(*branch)
             plt.plot(x, y, color = "black", linewidth = lw)
-        
+        plt.gca().set_aspect('equal')
         if name:
             plt.savefig("plots/" + name + ".png", dpi=300, bbox_inches='tight')
             plt.show()

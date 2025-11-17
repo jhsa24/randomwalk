@@ -22,16 +22,11 @@ RW = RandomWalk(
         
 BRW = BranchingRandomWalk(
     step_dist = lambda: 1,
-    angle_dist = normal(0,1/5), 
-    branch_angle_dist = uniform(math.pi/5, math.pi/3),
-    branch_waiting_dist = exponential(1/30)
+    angle_dist = pmf({math.pi/3 : 1, -math.pi/3:1}), 
+    branch_angle_dist = lambda: math.pi / 3,
+    branch_waiting_dist = exponential(1/15)
     )
 
+barw_test = BRW.get_barw(100, radius = 1)
 
-#BRW.graph_walk(50, name = "Branclearching Random Walk")
-
-TEST = BRW.get_anhilating_walk(50, 0.9)
-
-BRW.graph_walk(200, walk = TEST)
-
-
+BRW.graph_walk(100, walk = barw_test, name = "BARW test")
