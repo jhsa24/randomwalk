@@ -21,7 +21,7 @@ RW = RandomWalk(
 
         
 BRW = BranchingRandomWalk(
-    step_dist = lambda: 2,
+    step_dist = lambda: 1,
     angle_dist = normal(0,1/5), 
     branch_angle_dist = uniform(math.pi/5, math.pi/3),
     branch_waiting_dist = exponential(1/30)
@@ -30,7 +30,7 @@ BRW = BranchingRandomWalk(
 
 #BRW.graph_walk(50, name = "Branclearching Random Walk")
 
-TEST = BRW.get_anhilating_walk(50, 1)
+TEST = BRW.get_anhilating_walk(50, 0.9)
 
 BRW.graph_walk(200, walk = TEST)
 

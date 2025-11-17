@@ -128,7 +128,6 @@ class BranchingRandomWalk:
             print("===========================")
             
             for w in current_walkers:
-                bt = w[1]
                 dead = False
                 #if walker is too close to a branch, make inactive
                 for branch in positions:
@@ -148,9 +147,8 @@ class BranchingRandomWalk:
                     if dead:
                         continue
                 
-                #rest of code for active walkers
                 #if branching point not yet reached, jump one step
-                if w[0].iteration < bt:
+                if w[0].iteration < w[1]:
                     w[0].rotate(self.angle_dist())
                     w[0].move(self.step_dist())
                     w[0].iteration += 1
