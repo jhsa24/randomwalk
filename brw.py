@@ -10,6 +10,7 @@ from walk import Particle
 from distributions import uniform, exponential
 import math
 import matplotlib.pyplot as plt
+import numpy as np
 
 
 
@@ -244,8 +245,131 @@ class BranchingRandomWalk:
             iteration += 1
             
         positions = [walker_dict[i]["positions"] for i in walker_dict]
-        return positions 
+        return positions
+    
+    def get_barw_v2(self, num_steps, radius = 1):
+        walker_dict = {0:{"walker" : Particle((0,0),0),
+                          "branch_time" : self.branch_waiting_dist(),
+                          "dead" : False,
+                          "positions" : [(0,0)],
+                          "parent" : None,
+                          "sibling" : None
+                          }}
+        
+        edge_case_count = 0
+        
+        radius_squared = radius*radius
+        iteration = 1
+        
+        pos, index, iteration_ls = [(0,0)], [0], [0]
+        pos_np = np.array(pos)
+        index_np = np.array(index)
+        iteration_np = np.array(iteration_ls)
+        
+        while iteration < num_steps:
+            #print(f"Iteration number: {iteration}")
+            for i in list(walker_dict.keys()):
+                walker_i = walker_dict[i]
+                w = walker_i["walker"]
+                #skip inactive particles
+                if walker_i["dead"]:
+                    continue
+    
+                #calculate distance of all points from walker position
+                diff = pos_np - np.array(w.position)
+                distance_squared = np.sum(diff*diff, 1)
+                #pre calculate parent and sibling ids
+                parent = walker_i["parent"]
+                sibling = walker_i["sibling"]
+                #create masks to ignore certain positions
+                #masks return true if they should be ignored
+                mask_self = distance_squared < 1e-9
+                mask_past = (index_np == i) & (iteration_np >= w.iteration - 1)
+                if parent != None and (w.iteration <= 1):
+                    pbt = walker_dict[parent]["branch_time"]
+                    grandparent = walker_dict[parent]["parent"]
+                    if grandparent!= None and (pbt - 1 < 0):
+                        gpbt = walker_dict[grandparent]["branch_time"]
+                        mask1 = (index_np == parent) & (iteration_np >= pbt-1)
+                        mask2 = (index_np == grandparent) & (iteration_np >= gpbt-1)
+                        mask_parent = mask1 | mask2
+                    else:
+                        mask_parent = (index_np == parent) & (iteration_np >= pbt-1)
+                else:
+                    mask_parent = np.zeros_like(mask_self)
+                if sibling != None and (w.iteration <= 1):
+                    uncle = walker_dict[parent]["sibling"]
+                    if uncle != None and (pbt-1 < 0):
+                        ubt = walker_dict[uncle]["branch_time"]
+                        m1 = (index_np == sibling) & (iteration_np <= 1)
+                        m2 = (index_np == uncle) & (iteration_np >= ubt-1)
+                        mask_sibling = m1| m2
+                        edge_case_count += 1
+                    else:
+                        mask_sibling = (index_np == sibling) & (iteration_np <= 1)
+                else:
+                    mask_sibling = np.zeros_like(mask_self)
+                
+                mask = mask_self | mask_past | mask_parent | mask_sibling
+                too_close = (distance_squared < radius_squared) & ~mask
+                """
+                print(f"id {i} with parent {parent} and sibling {sibling}")
+                print(f"distance    : {distance_squared}")
+                print(f"index np    : {index_np}")
+                print(f"iteration   : {iteration_np}")
+                print(f"mask past   : {mask_past}")
+                print(f"mask parent : {mask_parent}")
+                print(f"mask sibling: {mask_sibling}")
+                print(f"too close   : {too_close}")
+                print(" ")
+                """
+                if np.any(too_close):
+                    walker_i["dead"] = True
+                    continue
+                
+                #if branching doesn't occur, walk one step
+                if w.iteration < walker_i["branch_time"]:
+                    w.rotate(self.angle_dist())
+                    w.move(self.step_dist())
+                    w.iteration += 1
+                    
+                    walker_i["positions"].append(w.position)
+                    pos.append(w.position)
+                    index.append(i)
+                    iteration_ls.append(w.iteration)
+                    
+                    pos_np = np.array(pos)
+                    index_np = np.array(index)
+                    iteration_np = np.array(iteration_ls)
+                    continue
+                
+                #otherwise kill the walker and create two new ones
+                walker_i["dead"] = True
+                #calculate size of dictionary ready for new indices
+                size = len(walker_dict)
+                angle = self.branch_angle_dist()
+          
+                walker_dict[size] = {"walker" : Particle(w.position, w.angle + angle),
+                                     "branch_time" : self.branch_waiting_dist(),
+                                     "dead" : False,
+                                     "positions" : [w.position],
+                                     "parent" : i,
+                                     "sibling" : size + 1}
             
+                walker_dict[size+1] = {"walker" : Particle(w.position, w.angle - angle),
+                                     "branch_time" : self.branch_waiting_dist(),
+                                     "dead" : False,
+                                     "positions" : [w.position],
+                                     "parent" : i,
+                                     "sibling" : size}
+                #print("Branching occuring, new dictionary:")
+                #print(walker_dict)
+            #print("================================")
+            iteration += 1
+        
+        print(edge_case_count)
+        positions = [walker_dict[i]["positions"] for i in walker_dict]
+        return positions         
     
     def graph_walk(self, num_steps, name = None, lw = 0.75, walk = None):
         if walk:
