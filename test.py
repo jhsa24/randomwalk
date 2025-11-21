@@ -25,7 +25,7 @@ BRW = BranchingRandomWalk(
     step_dist = lambda: 1,
     angle_dist = normal(0,1/3), 
     branch_angle_dist = lambda : math.pi/3,
-    branch_waiting_dist = exponential(1/10)
+    branch_waiting_dist = exponential(1/3)
     )
 
 """
@@ -38,24 +38,30 @@ BRW = BranchingRandomWalk(
     )
 """
 
-n,r = 50, 1.5
+n,r,num_sim = 300, 1.5, 1
 
 """
 t0 = time()
-test = BRW.get_barw(n,r)
+for _ in range(num_sim):
+    test = BRW.get_barw(n,r)
+BRW.graph_walk(0, walk = test)
 t1 = time()
-BRW.graph_walk(100, walk = test)
-t2 = time()
-print(f"Total time taken: {t2-t0}")
-print(f"With {t1-t0}s walking, {t2-t1}s graphing")
+print(f"V1 Total time taken: {t1-t0}")
+print(" ")
+
+
+t0 = time()
+for _ in range(num_sim):
+    test = BRW.get_barw_v2(n,r)
+BRW.graph_walk(0, walk = test)
+t1 = time()
+print(f"V2 Total time taken: {t1-t0}")
 print(" ")
 """
-
 t0 = time()
-test = BRW.get_barw_v2(n,r)
+for _ in range(num_sim):
+    test = BRW.get_barw_v3(n,r)
+BRW.graph_walk(0, walk = test)
 t1 = time()
-BRW.graph_walk(100, walk = test)
-t2 = time()
-print(f"Total time taken: {t2-t0}")
-print(f"With {t1-t0}s walking, {t2-t1}s graphing")
+print(f"V3 Total time taken: {t1-t0}")
 print(" ")
