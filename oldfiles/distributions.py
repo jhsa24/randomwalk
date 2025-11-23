@@ -11,7 +11,7 @@ and some transformation on r yields the required pdf
 
 import random
 import matplotlib.pyplot as plt
-import math as maths
+import math
 
 #defines a pmf distribution for finite sample spaces
 #eg pmf({"H":1, "T"":2}) produces a weighted coin toss
@@ -44,14 +44,14 @@ def pmf(prob_dict):
 def cauchy(location, spread):
     def sample():
         r = random.random()
-        return spread * maths.tan( maths.pi * (r-0.5) ) + location
+        return spread * math.tan( math.pi * (r-0.5) ) + location
     return sample
 
 #defines an exponential pdf by inverse sampling
 def exponential(scale):
     def sample():
         r = random.random()
-        return - (maths.log(r)) / scale
+        return - (math.log(r)) / scale
     return sample
 
 #I had to cheat on this one :(
