@@ -65,6 +65,13 @@ def uniform(start, end):
         return start + (end - start) * r
     return sample
 
+def list_seq(lst):
+    current_index = 0
+    def inner_func():
+        nonlocal current_index
+        current_index = (current_index + 1) % len(lst)
+        return lst[current_index - 1]
+    return inner_func
 
 #graphing function for testing purposes, takes a sample size n from a pdf,
 #and graphs the distribution of points. Good sanity check.

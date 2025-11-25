@@ -12,21 +12,41 @@ and append its position to a list each iteration, and graph the list
 
 import math as maths
 import matplotlib.pyplot as plt
+import numpy as np
 
-from aux import Particle, mean
-from distributions import pmf
-        
+from aux import Particle, mean, mask_past, combine_masks
+from distributions import pmf, uniform
+
+"""
+some constants:
+"""
+k = 0.1 #global guidance strength scaler
+     
 class RandomWalk:
     def __init__(self, 
                  dimension = 2, 
                  step_dist = lambda: 1, 
-                 angle_dist = pmf({maths.pi * i/2:1 for i in range(4)})):
+                 angle_dist = pmf({maths.pi * i/2:1 for i in range(4)}),
+                 initial_pos_dist = uniform(-5,5),
+                 initial_angle_dist = uniform(0, 2*maths.pi),
+                 guidance_strength = 0,
+                 guidance_angle = 0):
         
         self.dimension = dimension
         self.step_dist = step_dist
         self.angle_dist = angle_dist
+        self.initial_pos_dist = initial_pos_dist
+        self.initial_angle_dist = initial_angle_dist
+        self.guidance_strength = guidance_strength
+        self.guidance_angle = guidance_angle
         self.particle = Particle((0,0), 0)
-        
+    
+    def biased_angle_dist(self, angle):
+        angle_difference = angle - self.guidance_angle
+        unbiased_angle = self.angle_dist()
+        biased_angle = - k * self.guidance_strength * maths.sin(angle_difference)
+        return biased_angle + unbiased_angle
+    
     #perform walk of given length, output is a list 
     def get_walk(self, num_steps):
         positions = []
@@ -44,13 +64,165 @@ class RandomWalk:
                 self.particle.move(self.step_dist())
                 positions.append(self.particle.position)
             
-        return positions    
+        return positions
+
+    def get_guided_walk(self, num_steps):
+        positions, soma = [], []
+        self.particle.position = (0,0)
+        positions.append(self.particle.position)
+        soma.append(self.particle.position)
+        for _ in range(num_steps):
+            angle = self.biased_angle_dist(self.particle.angle)
+            self.particle.rotate(angle)
+            self.particle.move(self.step_dist())
+            positions.append(self.particle.position)
+        
+        return [positions], soma
+    
+    def get_multi_arw(self, 
+                      num_steps, 
+                      num_walkers, 
+                      radius = 1 ):
+        
+        walker_dict = {}
+        somas = []
+        pos_np = np.zeros((num_walkers, 2))
+        index_np = np.zeros(num_walkers, dtype=int)
+        iteration_np = np.zeros(num_walkers, dtype=int)
+        
+        for i in range(num_walkers):
+            x = self.initial_pos_dist()
+            if type(x) == tuple:
+                x,y = x
+            else:
+                y = self.initial_pos_dist()
+            
+            theta = self.initial_angle_dist()
+            walker_dict[i] = {"walker" : Particle((x,y),theta),
+                              "dead" : False,
+                              "positions" : [(x,y)]
+                              }
+            somas.append((x,y))
+            pos_np[i] = (x,y)
+            index_np[i] = i
+            iteration_np[i] = 0
+            
+        radius_squared = radius*radius
+        iteration = 1
+       
+        while iteration < num_steps:
+            for i in list(walker_dict.keys()):
+                walker_i = walker_dict[i]
+                w = walker_i["walker"]
+                #skip inactive particles
+                if walker_i["dead"]:
+                    continue
+   
+                #calculate distance of all points from walker position
+                diff = pos_np - np.array(w.position)
+                distance_squared = np.einsum('ij,ij->i', diff, diff)
+                #distance_squared = (diff * diff).sum(axis=1)
+
+                #create masks to ignore certain positions
+                #masks return true if they should be ignored
+                m_self = distance_squared < 1e-9
+                m_past = mask_past(index_np, iteration_np, i, w.iteration)
+                mask = m_self | m_past
+                #mask = combine_masks([m_self, m_past])
+                too_close = (distance_squared < radius_squared) & ~mask
+               
+                if np.any(too_close):
+                    walker_i["dead"] = True
+                    continue
+             
+                w.rotate(self.angle_dist())
+                w.move(self.step_dist())
+                w.iteration += 1
+                
+                walker_i["positions"].append(w.position)
+                    
+                pos_np = np.vstack([pos_np, w.position])
+                index_np = np.hstack([index_np, i])
+                iteration_np = np.hstack([iteration_np, w.iteration])
+                  
+            iteration += 1
+
+        positions = [walker_dict[i]["positions"] for i in walker_dict]
+        return positions, somas
+    
+    def get_guided_multi_arw(self, num_steps, num_walkers, radius):
+        walker_dict = {}
+        somas = []
+        pos_np = np.zeros((num_walkers, 2))
+        index_np = np.zeros(num_walkers, dtype=int)
+        iteration_np = np.zeros(num_walkers, dtype=int)
+        
+        for i in range(num_walkers):
+            x = self.initial_pos_dist()
+            if type(x) == tuple:
+                x,y = x
+            else:
+                y = self.initial_pos_dist()
+            
+            theta = self.initial_angle_dist()
+            walker_dict[i] = {"walker" : Particle((x,y),theta),
+                              "dead" : False,
+                              "positions" : [(x,y)]
+                              }
+            somas.append((x,y))
+            pos_np[i] = (x,y)
+            index_np[i] = i
+            iteration_np[i] = 0
+            
+        radius_squared = radius*radius
+        iteration = 1
+       
+        while iteration < num_steps:
+            for i in list(walker_dict.keys()):
+                walker_i = walker_dict[i]
+                w = walker_i["walker"]
+                #skip inactive particles
+                if walker_i["dead"]:
+                    continue
+   
+                #calculate distance of all points from walker position
+                diff = pos_np - np.array(w.position)
+                distance_squared = np.einsum('ij,ij->i', diff, diff)
+                #distance_squared = (diff * diff).sum(axis=1)
+
+                #create masks to ignore certain positions
+                #masks return true if they should be ignored
+                m_self = distance_squared < 1e-9
+                m_past = mask_past(index_np, iteration_np, i, w.iteration)
+                mask = m_self | m_past
+                #mask = combine_masks([m_self, m_past])
+                too_close = (distance_squared < radius_squared) & ~mask
+               
+                if np.any(too_close):
+                    walker_i["dead"] = True
+                    continue
+                angle = self.biased_angle_dist(w.angle)
+                w.rotate(angle)
+                w.move(self.step_dist())
+                w.iteration += 1
+                
+                walker_i["positions"].append(w.position)
+                    
+                pos_np = np.vstack([pos_np, w.position])
+                index_np = np.hstack([index_np, i])
+                iteration_np = np.hstack([iteration_np, w.iteration])
+                  
+            iteration += 1
+
+        positions = [walker_dict[i]["positions"] for i in walker_dict]
+        return positions, somas
     
     #hidden helper function for graph_walk(..)
     def __graph_walk_1d(self, num_steps, name = None, lw = 0.5):
         plt.plot(self.get_walk(num_steps), linewidth = lw)
         plt.gca().axes.get_xaxis().set_visible(False)
         plt.gca().axes.get_yaxis().set_visible(False)
+        plt.gca().set_aspect('equal')
         plt.title(f"1d walk of length {num_steps}")
         if name:
             plt.savefig("plots/" + name + ".png", dpi=300, bbox_inches='tight')
@@ -64,6 +236,7 @@ class RandomWalk:
         plt.plot(x, y, linewidth = lw)
         plt.gca().axes.get_xaxis().set_visible(False)
         plt.gca().axes.get_yaxis().set_visible(False)
+        plt.gca().set_aspect('equal')
         plt.title(f"2d walk of length {num_steps}")
         if name:
             plt.savefig("plots/" + name + ".png", dpi=300, bbox_inches='tight')

@@ -62,12 +62,20 @@ def mask_relatives(index_np, iteration_np, walker_index, walker_dict):
     return combine_masks([mask1, mask2])
 
 """
-4: A few commonly used graph functions
+4: Some bias functions to be used in global guidance
 """
-def graph_walks(nested_list, lw = 0.75, col = "black", name = None):
+
+
+"""
+5: A few commonly used graph functions
+"""
+def graph_walks(nested_list, somas, lw = 0.75, col = "black", name = None):
     for lst in nested_list:
         x, y = zip(*lst)
         plt.plot(x, y, color = col, linewidth = lw)
+    for soma in somas:
+        x, y = zip(soma)
+        plt.plot(x, y, color = 'red', marker = 'o', markersize = 2.5)
     plt.gca().set_aspect('equal')
     if name:
         plt.savefig("plots/" + name + ".png", dpi=300, bbox_inches='tight')
