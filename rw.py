@@ -14,7 +14,7 @@ import math as maths
 import matplotlib.pyplot as plt
 import numpy as np
 
-from aux import Particle, mean, mask_past, combine_masks
+from aux import Particle, mean, mask_past, combine_masks, constant
 from distributions import pmf, uniform
 
 """
@@ -37,14 +37,22 @@ class RandomWalk:
         self.angle_dist = angle_dist
         self.initial_pos_dist = initial_pos_dist
         self.initial_angle_dist = initial_angle_dist
-        self.guidance_strength = guidance_strength
-        self.guidance_angle = guidance_angle
+        
+        if type(guidance_angle) in [float, int]:
+            self.guidance_angle = constant(guidance_angle)
+        else:
+            self.guidance_angle = guidance_angle
+        if type(guidance_strength) in [float, int]:
+            self.guidance_strength = constant(guidance_strength)
+        else:
+            self.guidance_strength = guidance_strength
+            
         self.particle = Particle((0,0), 0)
     
-    def biased_angle_dist(self, angle):
-        angle_difference = angle - self.guidance_angle
+    def biased_angle_dist(self, walker):
+        angle_difference = walker.angle - self.guidance_angle(*walker.position)
         unbiased_angle = self.angle_dist()
-        biased_angle = - k * self.guidance_strength * maths.sin(angle_difference)
+        biased_angle = - k * self.guidance_strength(*walker.position) * maths.sin(angle_difference)
         return biased_angle + unbiased_angle
     
     #perform walk of given length, output is a list 
@@ -72,7 +80,7 @@ class RandomWalk:
         positions.append(self.particle.position)
         soma.append(self.particle.position)
         for _ in range(num_steps):
-            angle = self.biased_angle_dist(self.particle.angle)
+            angle = self.biased_angle_dist(self.particle)
             self.particle.rotate(angle)
             self.particle.move(self.step_dist())
             positions.append(self.particle.position)
@@ -201,7 +209,7 @@ class RandomWalk:
                 if np.any(too_close):
                     walker_i["dead"] = True
                     continue
-                angle = self.biased_angle_dist(w.angle)
+                angle = self.biased_angle_dist(w)
                 w.rotate(angle)
                 w.move(self.step_dist())
                 w.iteration += 1

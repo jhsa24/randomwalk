@@ -5,7 +5,7 @@ Code for Branching, Annihilating, Arresting, Interacting etc.... Random Walks
 import math as maths
 import numpy as np
 
-from aux import Particle, combine_masks, mask_past, mask_relatives
+from aux import Particle, combine_masks, mask_past, mask_relatives, constant
 from distributions import uniform, exponential
 
 """
@@ -15,7 +15,7 @@ k = 0.1 #global guidance strength scaler
 
 class BranchingRandomWalk:
     def __init__(self, 
-                 dimension = 2, 
+                 dimension = 2,
                  step_dist = lambda : 1, 
                  angle_dist = uniform(-maths.pi/5, maths.pi/5), 
                  branch_waiting_dist = exponential(1/15),
@@ -32,14 +32,22 @@ class BranchingRandomWalk:
         self.branch_angle_dist = branch_angle_dist
         self.initial_pos_dist = initial_pos_dist
         self.initial_angle_dist = initial_angle_dist
-        self.guidance_strength = guidance_strength
-        self.guidance_angle = guidance_angle
-          
         
-    def biased_angle_dist(self, angle):
-        angle_difference = angle - self.guidance_angle
+        if type(guidance_angle) in [float, int]:
+            self.guidance_angle = constant(guidance_angle)
+        else:
+            self.guidance_angle = guidance_angle
+        if type(guidance_strength) in [float, int]:
+            self.guidance_strength = constant(guidance_strength)
+        else:
+            self.guidance_strength = guidance_strength
+          
+    #defines a bias function to nudge walker in the direction of the guiding field
+    #this is used in place of the angle distribution on its own    
+    def biased_angle_dist(self, walker):
+        angle_difference = walker.angle - self.guidance_angle(*walker.position)
         unbiased_angle = self.angle_dist()
-        biased_angle = - k * self.guidance_strength * maths.sin(angle_difference)
+        biased_angle = - k * self.guidance_strength(*walker.position) * maths.sin(angle_difference)
         return biased_angle + unbiased_angle
     
     #performs a branching random walk, outputting two lists:
@@ -74,7 +82,8 @@ class BranchingRandomWalk:
                 
                 #if branching point not yet reached, jump one step
                 if w.iteration < walker_i["branch_time"]:
-                    w.rotate(self.angle_dist())
+                    angle = self.biased_angle_dist(w)
+                    w.rotate(angle)
                     w.move(self.step_dist())
                     w.iteration += 1
                     walker_i["positions"].append(w.position)
@@ -88,16 +97,17 @@ class BranchingRandomWalk:
             for parent_id in new_branches:
                 #calculate size of dictionary ready for new indices
                 size = len(walker_dict)
-                angle = self.branch_angle_dist()
+                angle1 = abs(self.branch_angle_dist())
+                angle2 = abs(self.branch_angle_dist())
                 parent = walker_dict[parent_id]["walker"]
-                walker_dict[size] = {"walker" : Particle(parent.position, parent.angle + angle),
+                walker_dict[size] = {"walker" : Particle(parent.position, parent.angle + angle1),
                                      "branch_time" : self.branch_waiting_dist(),
                                      "dead" : False,
                                      "positions" : [parent.position],
                                      "parent" : parent_id,
                                      "sibling" : size + 1}
             
-                walker_dict[size+1] = {"walker" : Particle(parent.position, parent.angle - angle),
+                walker_dict[size+1] = {"walker" : Particle(parent.position, parent.angle - angle2),
                                      "branch_time" : self.branch_waiting_dist(),
                                      "dead" : False,
                                      "positions" : [parent.position],
@@ -161,7 +171,7 @@ class BranchingRandomWalk:
                 
                 #if branching doesn't occur, walk one step
                 if w.iteration < walker_i["branch_time"]:
-                    angle = self.biased_angle_dist(w.angle)
+                    angle = self.biased_angle_dist(w)
                     w.rotate(angle)
                     w.move(self.step_dist())
                     w.iteration += 1
@@ -181,17 +191,18 @@ class BranchingRandomWalk:
             for parent_id in new_branches:
                 #calculate size of dictionary ready for new indices
                 size = len(walker_dict)
-                angle = self.branch_angle_dist()
+                angle1 = abs(self.branch_angle_dist())
+                angle2 = abs(self.branch_angle_dist())
                 parent = walker_dict[parent_id]["walker"]
                 
-                walker_dict[size] = {"walker" : Particle(parent.position, parent.angle + angle),
+                walker_dict[size] = {"walker" : Particle(parent.position, parent.angle + angle1),
                                      "branch_time" : self.branch_waiting_dist(),
                                      "dead" : False,
                                      "positions" : [parent.position],
                                      "parent" : parent_id,
                                      "sibling" : size + 1}
             
-                walker_dict[size+1] = {"walker" : Particle(parent.position, parent.angle - angle),
+                walker_dict[size+1] = {"walker" : Particle(parent.position, parent.angle - angle2),
                                      "branch_time" : self.branch_waiting_dist(),
                                      "dead" : False,
                                      "positions" : [parent.position],
@@ -265,7 +276,7 @@ class BranchingRandomWalk:
                 
                 #if branching doesn't occur, walk one step
                 if w.iteration < walker_i["branch_time"]:
-                    angle = self.biased_angle_dist(w.angle)
+                    angle = self.biased_angle_dist(w)
                     w.rotate(angle)
                     w.move(self.step_dist())
                     w.iteration += 1
@@ -285,17 +296,18 @@ class BranchingRandomWalk:
             for parent_id in new_branches:
                 #calculate size of dictionary ready for new indices
                 size = len(walker_dict)
-                angle = self.branch_angle_dist()
+                angle1 = abs(self.branch_angle_dist())
+                angle2 = abs(self.branch_angle_dist())
                 parent = walker_dict[parent_id]["walker"]
                 
-                walker_dict[size] = {"walker" : Particle(parent.position, parent.angle + angle),
+                walker_dict[size] = {"walker" : Particle(parent.position, parent.angle + angle1),
                                      "branch_time" : self.branch_waiting_dist(),
                                      "dead" : False,
                                      "positions" : [parent.position],
                                      "parent" : parent_id,
                                      "sibling" : size + 1}
             
-                walker_dict[size+1] = {"walker" : Particle(parent.position, parent.angle - angle),
+                walker_dict[size+1] = {"walker" : Particle(parent.position, parent.angle - angle2),
                                      "branch_time" : self.branch_waiting_dist(),
                                      "dead" : False,
                                      "positions" : [parent.position],

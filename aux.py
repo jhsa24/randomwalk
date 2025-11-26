@@ -62,9 +62,46 @@ def mask_relatives(index_np, iteration_np, walker_index, walker_dict):
     return combine_masks([mask1, mask2])
 
 """
-4: Some bias functions to be used in global guidance
-"""
+4: Some functions to be used in global guidance
 
+Instead of phi = K for some constant K, 
+suppose instead phi = f(x,y) 
+i.e. guidance can vary with position
+"""
+def constant(c):
+    def inner_func(x,y):
+        return c % (2*maths.pi)
+    return inner_func
+
+def f(x,y):
+    x = np.asarray(x)
+    y = np.asarray(y)
+    return np.where(x<0, 0, np.pi)
+
+#set offset = 0 for radial field, pi/2 for circlular
+def swirl(offset):    
+    def inner_func(x,y):
+        x = np.asarray(x)
+        y = np.asarray(y)
+        angle = np.arctan2(y,x) + offset
+        return np.mod(angle, 2*np.pi)
+    return inner_func
+
+def graph_angle_field(angle_field, x = (-5,5), y = (-5,5), num_arrows = 10, name = None):
+    x_axis = np.linspace(-x[0], x[1], num_arrows)
+    y_axis = np.linspace(-y[0], y[1], num_arrows)
+    X, Y = np.meshgrid(x_axis, y_axis)
+    
+    Angle = angle_field(X,Y)
+    
+    U = np.cos(Angle)
+    V = np.sin(Angle)
+    
+    plt.quiver(X, Y, U, V)
+    if name:
+        plt.savefig("plots/" + name + ".png", dpi=300, bbox_inches='tight')
+        plt.show()
+    else: plt.show()
 
 """
 5: A few commonly used graph functions

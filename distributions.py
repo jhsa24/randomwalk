@@ -65,6 +65,9 @@ def uniform(start, end):
         return start + (end - start) * r
     return sample
 
+#is called in the same way as the other pdf, but as deterministic
+#first call yields the item at index 0, then index 1 etc...
+#useful for seeding specific configurations for testing
 def list_seq(lst):
     current_index = 0
     def inner_func():
