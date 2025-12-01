@@ -5,7 +5,7 @@ All functions should behave in the same way:
 Should output a random number each time, accorading to some probability distribution
 fixed by function(params)
 
-Most functions work on the principle of inverse sampling, ie, take a uniform variable r = (0,1),
+Most functions work via inverse sampling, ie, take a uniform variable r = (0,1),
 and some transformation on r yields the required pdf
 """
 

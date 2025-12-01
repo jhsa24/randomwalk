@@ -50,18 +50,18 @@ class BranchingRandomWalk:
         biased_angle = - k * self.guidance_strength(*walker.position) * maths.sin(angle_difference)
         return biased_angle + unbiased_angle
     
-    #performs a branching random walk, outputting two lists:
-    #first, a nested list [ [(x1,y1), (x2,y2),  ], [...], ...]
-    #each sublist contains the trajectory of a single branch
-    #second, a list containing the soma point
-    #for brw and barw this is a single point only
-    def get_brw(self, num_steps):
+    
+    #performs a branching random walk, keeping track of all information with a dictionary
+    #returned output is this dictionary, to be stored in WalkData and analysed in Analysis objects
+    def get_brw(self, num_steps, initial_pos = (0,0), initial_angle = 0):
         #dictionary keeps track of all walkers, how long they travel before branching,
         #whether they are active and the trajectory taken so far
-        walker_dict = {0:{"walker" : Particle((0,0),0),
-                          "branch_time" : self.branch_waiting_dist(),
+        walker_dict = {0:{"walker" : Particle(initial_pos, initial_angle),
+                          "soma" : True,
                           "dead" : False,
-                          "positions" : [(0,0)],
+                          "positions" : [initial_pos],
+                          "angles" : [initial_angle],
+                          "branch_time" : maths.ceil(self.branch_waiting_dist()),
                           "parent" : None,
                           "sibling" : None
                           }}
@@ -81,12 +81,13 @@ class BranchingRandomWalk:
                     continue
                 
                 #if branching point not yet reached, jump one step
-                if w.iteration < walker_i["branch_time"]:
+                if w.iteration <= walker_i["branch_time"]:
                     angle = self.biased_angle_dist(w)
                     w.rotate(angle)
                     w.move(self.step_dist())
                     w.iteration += 1
                     walker_i["positions"].append(w.position)
+                    walker_i["angles"].append(w.angle)
                     continue
                 
                 #otherwise, kill walker and add index to list of new branches
@@ -101,33 +102,37 @@ class BranchingRandomWalk:
                 angle2 = abs(self.branch_angle_dist())
                 parent = walker_dict[parent_id]["walker"]
                 walker_dict[size] = {"walker" : Particle(parent.position, parent.angle + angle1),
-                                     "branch_time" : self.branch_waiting_dist(),
+                                     "soma" : False,
                                      "dead" : False,
                                      "positions" : [parent.position],
+                                     "angles" : [parent.angle + angle1],
+                                     "branch_time" : maths.ceil(self.branch_waiting_dist()),
                                      "parent" : parent_id,
                                      "sibling" : size + 1}
             
                 walker_dict[size+1] = {"walker" : Particle(parent.position, parent.angle - angle2),
-                                     "branch_time" : self.branch_waiting_dist(),
-                                     "dead" : False,
-                                     "positions" : [parent.position],
-                                     "parent" : parent_id,
-                                     "sibling" : size}        
+                                       "soma" : False,
+                                       "dead" : False,
+                                       "positions" : [parent.position],
+                                       "angles" : [parent.angle - angle2],
+                                       "branch_time" : maths.ceil(self.branch_waiting_dist()),
+                                       "parent" : parent_id,
+                                       "sibling" : size}        
             iteration += 1
-        
-        positions = [walker_dict[i]["positions"] for i in walker_dict]
-        soma = [walker_dict[0]["positions"][0]]
-        return positions, soma
+                
+        return walker_dict
     
-    #performs a branching annihilating random walk, outputting a nested list [ [(x1,y1), (x2,y2),  ], [...], ...]
-    #each sublist contains the trajectory of a single branch
+    
+    #performs a branching annihilating random walk, returning the dictionary
     #if a particle gets too close to an existing duct, it stops all movement (annihilation)
     #walker movement follows global guidance
-    def get_barw(self, num_steps, radius = 1):
-        walker_dict = {0:{"walker" : Particle((0,0),0),
-                          "branch_time" : self.branch_waiting_dist(),
+    def get_barw(self, num_steps, radius = 1, initial_pos = (0,0), initial_angle = 0):
+        walker_dict = {0:{"walker" : Particle(initial_pos, initial_angle),
+                          "soma" : True,
                           "dead" : False,
-                          "positions" : [(0,0)],
+                          "positions" : [initial_pos],
+                          "angles" : [initial_angle],
+                          "branch_time" : maths.ceil(self.branch_waiting_dist()),
                           "parent" : None,
                           "sibling" : None
                           }}
@@ -177,6 +182,7 @@ class BranchingRandomWalk:
                     w.iteration += 1
                     
                     walker_i["positions"].append(w.position)
+                    walker_i["angles"].append(w.angle)
                     
                     pos_np = np.vstack([pos_np, w.position])
                     index_np = np.hstack([index_np, i])
@@ -196,28 +202,30 @@ class BranchingRandomWalk:
                 parent = walker_dict[parent_id]["walker"]
                 
                 walker_dict[size] = {"walker" : Particle(parent.position, parent.angle + angle1),
-                                     "branch_time" : self.branch_waiting_dist(),
+                                     "soma" : False,
                                      "dead" : False,
                                      "positions" : [parent.position],
+                                     "angles" : [parent.angle + angle1],
+                                     "branch_time" : maths.ceil(self.branch_waiting_dist()),
                                      "parent" : parent_id,
                                      "sibling" : size + 1}
             
                 walker_dict[size+1] = {"walker" : Particle(parent.position, parent.angle - angle2),
-                                     "branch_time" : self.branch_waiting_dist(),
-                                     "dead" : False,
-                                     "positions" : [parent.position],
-                                     "parent" : parent_id,
-                                     "sibling" : size}
+                                       "soma" : False,
+                                       "dead" : False,
+                                       "positions" : [parent.position],
+                                       "angles" : [parent.angle - angle2],
+                                       "branch_time" : maths.ceil(self.branch_waiting_dist()),
+                                       "parent" : parent_id,
+                                       "sibling" : size}
                 
             iteration += 1
 
-        positions = [walker_dict[i]["positions"] for i in walker_dict]
-        soma = [walker_dict[0]["positions"][0]]
-        return positions, soma
+        return walker_dict
     
     def get_multi_barw(self, num_steps, num_walkers, radius = 1):
         walker_dict = {}
-        somas = []
+
         pos_np = np.zeros((num_walkers, 2))
         index_np = np.zeros(num_walkers, dtype=int)
         iteration_np = np.zeros(num_walkers, dtype=int)
@@ -231,12 +239,13 @@ class BranchingRandomWalk:
                 y = self.initial_pos_dist()
             
             walker_dict[i] = {"walker" : Particle((x,y), theta),
-                              "branch_time" : self.branch_waiting_dist(),
-                              "dead" : False,
+                              "soma" : True,
+                              "dead" : False,  
                               "positions" : [(x,y)],
+                              "angles" : [theta],
+                              "branch_time" : maths.ceil(self.branch_waiting_dist()),
                               "parent" : None,
                               "sibling" : None}
-            somas.append((x,y))
             pos_np[i] = (x,y)
             index_np[i] = i
             iteration_np[i] = 0
@@ -275,13 +284,14 @@ class BranchingRandomWalk:
                     continue
                 
                 #if branching doesn't occur, walk one step
-                if w.iteration < walker_i["branch_time"]:
+                if w.iteration <= walker_i["branch_time"]:
                     angle = self.biased_angle_dist(w)
                     w.rotate(angle)
                     w.move(self.step_dist())
                     w.iteration += 1
                     
                     walker_i["positions"].append(w.position)
+                    walker_i["angles"].append(w.angle)
                     
                     pos_np = np.vstack([pos_np, w.position])
                     index_np = np.hstack([index_np, i])
@@ -301,20 +311,23 @@ class BranchingRandomWalk:
                 parent = walker_dict[parent_id]["walker"]
                 
                 walker_dict[size] = {"walker" : Particle(parent.position, parent.angle + angle1),
-                                     "branch_time" : self.branch_waiting_dist(),
-                                     "dead" : False,
+                                     "soma" : False,
+                                     "dead" : False, 
                                      "positions" : [parent.position],
+                                     "angles" : [parent.angle + angle1],
+                                     "branch_time" : maths.ceil(self.branch_waiting_dist()),
                                      "parent" : parent_id,
                                      "sibling" : size + 1}
             
                 walker_dict[size+1] = {"walker" : Particle(parent.position, parent.angle - angle2),
-                                     "branch_time" : self.branch_waiting_dist(),
-                                     "dead" : False,
+                                     "soma" : False,
+                                     "dead" : False, 
                                      "positions" : [parent.position],
+                                     "angles" : [parent.angle - angle2],
+                                     "branch_time" : maths.ceil(self.branch_waiting_dist()),
                                      "parent" : parent_id,
                                      "sibling" : size}
                 
             iteration += 1
 
-        positions = [walker_dict[i]["positions"] for i in walker_dict]
-        return positions, somas
+        return walker_dict

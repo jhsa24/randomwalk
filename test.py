@@ -3,49 +3,46 @@ Testing ground for random walks
 """
 from time import time
 import math as maths
-import numpy as np
-import matplotlib.pyplot as plt
 
-from aux import swirl, graph_walks
+from aux import swirl, graph_walks, polygon, angle, sample
 from rw import RandomWalk
 from barw import BranchingRandomWalk
+from graph import WalkData, Analysis
 from distributions import cauchy, pmf, uniform, exponential, normal, list_seq
 
+n = 3
+t0 = time()
 
-RW = RandomWalk(
-    step_dist = lambda: 0.25, 
+RW = RandomWalk( 
     angle_dist = uniform(-maths.pi/8, maths.pi/8),
-    initial_pos_dist = list_seq([(-3,0), (3,0), (-0.2,3)]),
-    initial_angle_dist = list_seq([0, maths.pi, 3*maths.pi/2]),
-    guidance_strength = 2,
-    guidance_angle = 0.3)
-
-#RW.graph_walk(200, lw=0.75)
-#RW.graph_walks(1000, 1000, lw=0.5, name = "03")
-#RW.graph_MSD(200, 200)
-#RW.graph_distribution_1d(500, 1000, -50, 50, 50)
-
-BRW = BranchingRandomWalk(
-    step_dist = lambda: 1,
-    angle_dist = normal(0,1/3), 
-    branch_angle_dist = uniform(maths.pi/5, maths.pi/3),
-    branch_waiting_dist = exponential(1/5),
-    initial_pos_dist = list_seq([(-10,0), (10,0), (0,10)]),
-    initial_angle_dist = list_seq([maths.pi, 0, maths.pi/2]),
-    guidance_strength = 3,
-    guidance_angle = 0.3
+    initial_pos_dist = list_seq(polygon(n, n)),
+    initial_angle_dist = list_seq(angle(polygon(n))),
+    guidance_strength = 1,
+    guidance_angle = swirl(0)
     )
 
-"""
-#Honeycomb walk
 BRW = BranchingRandomWalk(
-    step_dist = lambda: 1,
     angle_dist = normal(0,1/8), 
-    branch_angle_dist = pmf({-maths.pi/3:1, maths.pi/3:1}),
-    branch_waiting_dist = lambda : 3
+    branch_angle_dist = uniform(maths.pi/5, maths.pi/2),
+    branch_waiting_dist = exponential(1/15),
+    initial_pos_dist = list_seq(polygon(n, n)),
+    initial_angle_dist = list_seq(angle(polygon(n))),
+    guidance_strength = 1,
+    guidance_angle = maths.pi
     )
-"""
 
-walk, somas = BRW.get_multi_barw(30, 3, 1)
+#walk, somas = RW.get_multi_arw(150, n, 1.3)
+#walk, somas = BRW.get_multi_barw(200, n, 1.6)
 
-graph_walks(walk, somas, name = "test", lw = 0.8)
+#graph_walks(walk, somas, name = "test", lw = 0.8)
+
+w = sample(500, BRW.get_barw, 100, 1.5, initial_angle = maths.pi)
+
+data = WalkData(w)
+analysis = Analysis(data)
+
+analysis.graph_walk()
+analysis.graph_angles(0, 2*maths.pi, 60)
+
+t1= time()
+print(t1-t0)
