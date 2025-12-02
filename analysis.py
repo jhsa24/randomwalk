@@ -10,6 +10,8 @@ then many graphs / analyses made from a single run of the simulation
 import matplotlib.pyplot as plt
 import numpy as np
 
+from aux import mean
+
 class WalkData:
     def __init__(self, data, simulation = None):
         if type(data) == dict:
@@ -19,10 +21,79 @@ class WalkData:
         self.sample_size = len(self.data)
         self.simulation = simulation
         
-        self.positions = self.get_positions()
-        self.angles = self.get_angles()
         self.somas = self.get_somas()
-
+        self.numpyify()
+    
+    def get_branch_start_times(self):
+        all_times = []
+        for walk in self.data:
+            start_times = {}
+            incomplete = True
+            
+            while incomplete:
+                incomplete = False
+                for index in walk:
+                    if index in start_times:
+                        continue
+                    parent = walk[index]["parent"]
+                    if parent is None:
+                        start_times[index] = 0
+                    elif parent in start_times:
+                        start_times[index] = start_times[parent] + walk[parent]["branch_time"]
+                    else:
+                        incomplete = True
+            
+            all_times.append(start_times)
+        return all_times
+    
+    def get_positions_by_iter(self):
+        all_pos = []
+        branch_start_times = self.get_branch_start_times()
+        
+        for i, wd in enumerate(self.data):
+            positions = {}
+            for index in wd:
+                iteration = branch_start_times[i][index]
+                for pos in wd[index]["positions"]:
+                    positions.setdefault(iteration, []).append(pos)
+                    iteration += 1
+            all_pos.append(positions)
+        return all_pos
+    
+    
+    def numpyify(self):
+        all_pos = []
+        all_iters = []
+        all_angles = []
+        all_branch_id = []
+        all_parent_id = []
+        all_sample_id = []
+        
+        branch_start_times = self.get_branch_start_times()
+        for i, wd in enumerate(self.data):
+            for branch in wd:
+                positions = np.array(wd[branch]["positions"])
+                angles = np.array(wd[branch]["angles"])
+                
+                start = branch_start_times[i][branch]
+                length = len(positions)
+                iterations = np.arange(start, start + length)
+                
+                all_pos.append(positions)
+                all_iters.append(iterations)
+                all_angles.append(angles)
+                all_branch_id.append(np.full(length, branch))
+                all_parent_id.append(np.full(length, wd[branch]["parent"]))
+                all_sample_id.append(np.full(length, i))
+        
+        self.positions = np.vstack(all_pos)
+        self.iters = np.concatenate(all_iters)
+        self.angles = np.concatenate(all_angles)
+        self.branch_id = np.concatenate(all_branch_id)
+        self.parent_id = np.concatenate(all_parent_id)
+        self.sample_id = np.concatenate(all_sample_id)
+            
+    
     def get_positions(self):
         all_pos = []
         for d in self.data:
@@ -50,20 +121,37 @@ class WalkData:
         
         return all_somas
     
+    
 class Analysis:
     def __init__(self, walkdata):
         self.data = walkdata
+        
+        self.iters = walkdata.iters
+        self.angles = walkdata.angles
+        self.positions = walkdata.positions
+        self.branch_id = walkdata.branch_id
+        self.parent_id = walkdata.parent_id
+        self.sample_id = walkdata.sample_id
+        
+    def tmp(self, index=0):
+        pass
     
-        
+    
     def graph_walk(self, index = 0, lw = 0.75, col = "white", name = None):
-        walk = self.data.positions[index]
-        somas = self.data.somas[index]
+        #create arrays for masking sample
+        m_sample = self.sample_id == index
         
-        for branch in walk:
-            x, y = zip(*branch)
+        somas = self.positions[(self.iters == 0) & m_sample]
+        unique_branches = np.unique(self.branch_id[m_sample])
+        
+        for b in unique_branches:
+            pts = self.positions[(self.branch_id == b) & m_sample]
+            x = [p[0] for p in pts]
+            y = [p[1] for p in pts]
             plt.plot(x, y, color = col, linewidth = lw)
+        
         for soma in somas:
-            x, y = zip(soma)
+            x, y = soma[0], soma[1]
             plt.plot(x, y, color = 'red', marker = 'o', markersize = 2.5)
             
         plt.gca().set_aspect('equal')
@@ -74,29 +162,35 @@ class Analysis:
             plt.savefig("plots/" + name + ".png", dpi=300, bbox_inches='tight')
             plt.show()
         else: plt.show()
+    
+    
+    def graph_MSD(self, name = None):
         
-    def graph_angles(self, axis_min, axis_max, bin_number, name = None):
-        bin_width = (axis_max - axis_min) / bin_number
-        bins = [(axis_min, axis_min + bin_width)]
+        unique_iter = np.unique(self.iters)
+        list_of_averages = []
         
-        for i in range(bin_number - 1):
-            bin_start = bins[i][1]
-            bin_end = bin_start + bin_width
-            bins.append((bin_start, bin_end))
+        for t in range(len(unique_iter)):
+            pos = self.positions[self.iters == t]
+            distance_squared = (pos*pos).sum(axis=1)
+            
+            list_of_averages.append(mean(distance_squared))
         
-        count_dict = {}
+        plt.plot(list_of_averages)
+        plt.xlabel("Number of steps")
+        plt.ylabel("Mean Squared Distance")
+        if name:
+            plt.savefig("plots/" + name + ".png", dpi=300, bbox_inches='tight')
+            plt.show()
+        else: plt.show()
+            
+    
         
-        for b in bins:
-            count = 0
-            for angle in self.data.angles:
-                if b[0] <= angle < b[1]:
-                    count += 1
-                count_dict[0.5 * (b[0]+b[1])] = count
+    def graph_angles(self, indices = [], bin_number = None, name = None):
+        if type(indices) in [float, int]:
+            indices = [indices]
         
-        plt.plot(count_dict.keys(), count_dict.values())
-        plt.xlabel("Walker angle")
-        plt.ylabel("Frequency")
-        plt.title("Distribution of angles")
+        angles = self.angles
+        plt.hist(angles, bins = bin_number)
         
         if name:
             plt.savefig("plots/" + name + ".png", dpi=300, bbox_inches='tight')
