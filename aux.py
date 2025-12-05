@@ -140,3 +140,20 @@ def graph_walks(nested_list, somas, lw = 0.75, col = "white", name = None):
         plt.savefig("plots/" + name + ".png", dpi=300, bbox_inches='tight')
         plt.show()
     else: plt.show()
+    
+"""
+6: A few mathematical formulas for equation plotting
+"""
+
+def i0(v, max_iterations = 1000):
+    current_sum, iterations = 0, 0
+    incomplete = True
+    
+    while incomplete:
+        nth_term = ((0.25 * v) ** iterations) / (maths.factorial(k) ** 2)
+        current_sum += nth_term
+        iterations += 1
+        if (nth_term < 1e-9) or (iterations > max_iterations):
+            incomplete = False
+    
+    return current_sum, iterations

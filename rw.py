@@ -60,13 +60,13 @@ class RandomWalk:
     def get_rw(self, num_steps, initial_pos = (0,0), initial_angle = 0):
         walker_dict = {0: {
                         "walker" : Particle(initial_pos, initial_angle),
-                        "soma" : True,
                         "dead" : False,
                         "positions" : [initial_pos],
-                        "angles" : [initial_angle]
+                        "angles" : [initial_angle],
+                        "parent" : None
                         }}
         
-        for _ in range(num_steps):
+        for _ in range(num_steps+1):
             angle = self.biased_angle_dist(self.particle)
             self.particle.rotate(angle)
             self.particle.move(self.step_dist())
@@ -91,10 +91,10 @@ class RandomWalk:
             
             theta = self.initial_angle_dist()
             walker_dict[i] = {"walker" : Particle((x,y),theta),
-                              "soma" : True,
                               "dead" : False,
                               "positions" : [(x,y)],
-                              "angles" : [theta]
+                              "angles" : [theta],
+                              "parent" : None
                               }
             pos_np[i] = (x,y)
             index_np[i] = i
@@ -103,7 +103,7 @@ class RandomWalk:
         radius_squared = radius*radius
         iteration = 1
        
-        while iteration < num_steps:
+        while iteration <= num_steps:
             for i in list(walker_dict.keys()):
                 walker_i = walker_dict[i]
                 w = walker_i["walker"]

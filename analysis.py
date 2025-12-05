@@ -19,9 +19,20 @@ class WalkData:
         else:
             self.data = data
         self.sample_size = len(self.data)
-        self.simulation = simulation
         
-        self.somas = self.get_somas()
+        self.simulation = simulation
+        self.metadata = {}
+        if simulation:
+            self.metadata["dimension"] = getattr(simulation, "dimension", None)
+            self.metadata["step_dist"] = getattr(simulation, "step_dist", None)
+            self.metadata["angle_dist"] = getattr(simulation, "angle_dist", None)
+            self.metadata["branch_waiting_dist"] = getattr(simulation, "branch_waiting_dist", None)
+            self.metadata["branch_angle_dist"] = getattr(simulation, "branch_angle_dist", None)
+            self.metadata["initial_pos_dist"] = getattr(simulation, "initial_pos_dist", None)
+            self.metadata["initial_angle_dist"] = getattr(simulation, "initial_angle_dist", None)
+            self.metadata["guidance_angle"] = getattr(simulation, "guidance_angle", None)
+            self.metadata["guidance_strength"] = getattr(simulation, "guidance_strength", None)
+            
         self.numpyify()
     
     def get_branch_start_times(self):
@@ -124,7 +135,7 @@ class WalkData:
     
 class Analysis:
     def __init__(self, walkdata):
-        self.data = walkdata
+        self.data = walkdata.data
         
         self.iters = walkdata.iters
         self.angles = walkdata.angles
@@ -137,62 +148,154 @@ class Analysis:
         pass
     
     
-    def graph_walk(self, index = 0, lw = 0.75, col = "white", name = None):
+    def graph_walk(self, 
+                   sample = 0, 
+                   iteration = None, 
+                   lw = 0.75, 
+                   col = "black", 
+                   name = None,
+                   show = True):
+        
         #create arrays for masking sample
-        m_sample = self.sample_id == index
+        m_sample = self.sample_id == sample
+        if iteration:
+            if type(iteration) in [float, int]:
+                m_iter = self.iters <= iteration
+            elif type(iteration) in [tuple, list]:
+                m_iter = (iteration[0] <= self.iters) & (self.iters <= iteration[1])
+            else:
+                raise TypeError("Iteration must be integer or list")
+                
+        else:
+            m_iter = np.ones_like(self.iters, dtype = bool)
         
         somas = self.positions[(self.iters == 0) & m_sample]
-        unique_branches = np.unique(self.branch_id[m_sample])
+        unique_branches = np.unique(self.branch_id[m_sample & m_iter])
         
         for b in unique_branches:
-            pts = self.positions[(self.branch_id == b) & m_sample]
+            pts = self.positions[(self.branch_id == b) & m_sample & m_iter]
             x = [p[0] for p in pts]
             y = [p[1] for p in pts]
             plt.plot(x, y, color = col, linewidth = lw)
         
-        for soma in somas:
-            x, y = soma[0], soma[1]
-            plt.plot(x, y, color = 'red', marker = 'o', markersize = 2.5)
+        try:
+            start = iteration[0]
+        except Exception:
+            start = 0
+        if start == 0:
+            for soma in somas:
+                x, y = soma[0], soma[1]
+                plt.plot(x, y, color = 'red', marker = 'o', markersize = 2.5)
             
         plt.gca().set_aspect('equal')
         ax = plt.gca()
-        ax.set_facecolor("black")
+        ax.set_facecolor("white")
         
         if name:
             plt.savefig("plots/" + name + ".png", dpi=300, bbox_inches='tight')
+        if show: 
             plt.show()
-        else: plt.show()
-    
-    
-    def graph_MSD(self, name = None):
+
+
+    def graph_walkers_at_t(self,
+                           sample = 0,
+                           iteration = 0,
+                           col = 'red',
+                           name = None,
+                           show = True):
         
-        unique_iter = np.unique(self.iters)
+        m_sample = self.sample_id == sample
+        m_iter = self.iters == iteration
+        
+        current_pts = self.positions[m_sample & m_iter]
+        x = [p[0] for p in current_pts]
+        y = [p[1] for p in current_pts]
+        plt.scatter(x, y, color = col)
+        
+        if name:
+            plt.savefig("plots/" + name + ".png", dpi=300, bbox_inches='tight')
+        if show: 
+            plt.show()
+    
+    
+    def graph_MSD(self, 
+                  sample = None, 
+                  name = None,
+                  show = True):
+        
+        if sample != None:
+            if type(sample) in [float, int]:
+                sample = [sample]
+            m_sample = np.isin(self.sample_id, sample)
+        else:
+            m_sample = np.ones_like(self.sample_id, dtype = bool)
+            
+        unique_iter = np.unique(self.iters[m_sample])
         list_of_averages = []
-        
-        for t in range(len(unique_iter)):
-            pos = self.positions[self.iters == t]
+
+        for t in unique_iter:
+            pos = self.positions[(self.iters == t) & m_sample]
             distance_squared = (pos*pos).sum(axis=1)
             
-            list_of_averages.append(mean(distance_squared))
+            list_of_averages.append(np.mean(distance_squared))
         
         plt.plot(list_of_averages)
         plt.xlabel("Number of steps")
         plt.ylabel("Mean Squared Distance")
+        
         if name:
             plt.savefig("plots/" + name + ".png", dpi=300, bbox_inches='tight')
+        if show: 
             plt.show()
-        else: plt.show()
-            
     
+    
+    def graph_num_walkers(self,
+                             sample = None,
+                             name = None,
+                             show = True):
         
-    def graph_angles(self, indices = [], bin_number = None, name = None):
-        if type(indices) in [float, int]:
-            indices = [indices]
+        if sample != None:
+            if type(sample) in [float, int]:
+                sample = [sample]
+            m_sample = np.isin(self.sample_id, sample)
+            l = len(sample)
+        else:
+            m_sample = np.ones_like(self.sample_id, dtype = bool)
+            l = len(self.data)
+            
+        unique_iter = np.unique(self.iters[m_sample])
+        list_of_averages = []
         
-        angles = self.angles
+        for t in unique_iter:
+            num_walkers = len(self.positions[(self.iters == t) & m_sample])
+            list_of_averages.append(num_walkers/l)
+            
+        plt.plot(list_of_averages)
+        plt.xlabel("Number of steps")
+        plt.ylabel("Mean number of active walkers")
+        
+        if name:
+            plt.savefig("plots/" + name + ".png", dpi=300, bbox_inches='tight')
+        if show: 
+            plt.show()
+    
+    def graph_angles(self, 
+                     sample = None, 
+                     bin_number = None, 
+                     name = None, 
+                     show = True):
+        
+        if sample:
+            if type(sample) in [float, int]:
+                sample = [sample]
+            m_sample = np.isin(self.sample_id, sample)
+        else:
+            m_sample = np.ones_like(self.sample_id, dtype = bool)
+            
+        angles = self.angles[m_sample]
         plt.hist(angles, bins = bin_number)
         
         if name:
             plt.savefig("plots/" + name + ".png", dpi=300, bbox_inches='tight')
+        if show: 
             plt.show()
-        else: plt.show()

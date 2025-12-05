@@ -11,7 +11,7 @@ from distributions import uniform, exponential
 """
 some constants:
 """
-k = 0.1 #global guidance strength scaler
+k = 1 #global guidance strength scaler
 
 class BranchingRandomWalk:
     def __init__(self, 
@@ -57,10 +57,9 @@ class BranchingRandomWalk:
         #dictionary keeps track of all walkers, how long they travel before branching,
         #whether they are active and the trajectory taken so far
         walker_dict = {0:{"walker" : Particle(initial_pos, initial_angle),
-                          "soma" : True,
                           "dead" : False,
                           "positions" : [initial_pos],
-                          "angles" : [initial_angle],
+                          "angles" : [initial_angle % (2*maths.pi)],
                           "branch_time" : maths.ceil(self.branch_waiting_dist()),
                           "parent" : None,
                           "sibling" : None
@@ -68,7 +67,7 @@ class BranchingRandomWalk:
 
         iteration = 1
         
-        while iteration < num_steps:
+        while iteration <= num_steps:
             #initialise list of walkers that branch this iteration
             new_branches = []
             #loop over ids in walker_dict
@@ -102,19 +101,17 @@ class BranchingRandomWalk:
                 angle2 = abs(self.branch_angle_dist())
                 parent = walker_dict[parent_id]["walker"]
                 walker_dict[size] = {"walker" : Particle(parent.position, parent.angle + angle1),
-                                     "soma" : False,
                                      "dead" : False,
                                      "positions" : [parent.position],
-                                     "angles" : [parent.angle + angle1],
+                                     "angles" : [ (parent.angle + angle1) % (2*maths.pi)],
                                      "branch_time" : maths.ceil(self.branch_waiting_dist()),
                                      "parent" : parent_id,
                                      "sibling" : size + 1}
             
                 walker_dict[size+1] = {"walker" : Particle(parent.position, parent.angle - angle2),
-                                       "soma" : False,
                                        "dead" : False,
                                        "positions" : [parent.position],
-                                       "angles" : [parent.angle - angle2],
+                                       "angles" : [(parent.angle - angle2) % (2*maths.pi)],
                                        "branch_time" : maths.ceil(self.branch_waiting_dist()),
                                        "parent" : parent_id,
                                        "sibling" : size}        
@@ -128,10 +125,9 @@ class BranchingRandomWalk:
     #walker movement follows global guidance
     def get_barw(self, num_steps, radius = 1, initial_pos = (0,0), initial_angle = 0):
         walker_dict = {0:{"walker" : Particle(initial_pos, initial_angle),
-                          "soma" : True,
                           "dead" : False,
                           "positions" : [initial_pos],
-                          "angles" : [initial_angle],
+                          "angles" : [initial_angle % (2*maths.pi)],
                           "branch_time" : maths.ceil(self.branch_waiting_dist()),
                           "parent" : None,
                           "sibling" : None
@@ -144,7 +140,7 @@ class BranchingRandomWalk:
         index_np = np.array([0])
         iteration_np = np.array([0])
         
-        while iteration < num_steps:
+        while iteration <= num_steps:
             new_branches = []
             #print(f"Iteration number: {iteration}")
             for i in list(walker_dict.keys()):
@@ -202,19 +198,17 @@ class BranchingRandomWalk:
                 parent = walker_dict[parent_id]["walker"]
                 
                 walker_dict[size] = {"walker" : Particle(parent.position, parent.angle + angle1),
-                                     "soma" : False,
                                      "dead" : False,
                                      "positions" : [parent.position],
-                                     "angles" : [parent.angle + angle1],
+                                     "angles" : [(parent.angle + angle1) % (2*maths.pi)],
                                      "branch_time" : maths.ceil(self.branch_waiting_dist()),
                                      "parent" : parent_id,
                                      "sibling" : size + 1}
             
                 walker_dict[size+1] = {"walker" : Particle(parent.position, parent.angle - angle2),
-                                       "soma" : False,
                                        "dead" : False,
                                        "positions" : [parent.position],
-                                       "angles" : [parent.angle - angle2],
+                                       "angles" : [(parent.angle - angle2) % (2*maths.pi)],
                                        "branch_time" : maths.ceil(self.branch_waiting_dist()),
                                        "parent" : parent_id,
                                        "sibling" : size}
@@ -239,10 +233,9 @@ class BranchingRandomWalk:
                 y = self.initial_pos_dist()
             
             walker_dict[i] = {"walker" : Particle((x,y), theta),
-                              "soma" : True,
                               "dead" : False,  
                               "positions" : [(x,y)],
-                              "angles" : [theta],
+                              "angles" : [theta % (2*maths.pi)],
                               "branch_time" : maths.ceil(self.branch_waiting_dist()),
                               "parent" : None,
                               "sibling" : None}
@@ -253,7 +246,7 @@ class BranchingRandomWalk:
         radius_squared = radius*radius
         iteration = 1
              
-        while iteration < num_steps:
+        while iteration <= num_steps:
             new_branches = []
             #print(f"Iteration number: {iteration}")
             for i in list(walker_dict.keys()):
@@ -311,19 +304,17 @@ class BranchingRandomWalk:
                 parent = walker_dict[parent_id]["walker"]
                 
                 walker_dict[size] = {"walker" : Particle(parent.position, parent.angle + angle1),
-                                     "soma" : False,
                                      "dead" : False, 
                                      "positions" : [parent.position],
-                                     "angles" : [parent.angle + angle1],
+                                     "angles" : [(parent.angle + angle1) % (2*maths.pi)],
                                      "branch_time" : maths.ceil(self.branch_waiting_dist()),
                                      "parent" : parent_id,
                                      "sibling" : size + 1}
             
                 walker_dict[size+1] = {"walker" : Particle(parent.position, parent.angle - angle2),
-                                     "soma" : False,
                                      "dead" : False, 
                                      "positions" : [parent.position],
-                                     "angles" : [parent.angle - angle2],
+                                     "angles" : [(parent.angle - angle2) % (2*maths.pi)],
                                      "branch_time" : maths.ceil(self.branch_waiting_dist()),
                                      "parent" : parent_id,
                                      "sibling" : size}
