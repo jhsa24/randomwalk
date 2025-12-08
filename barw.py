@@ -67,7 +67,7 @@ class BranchingRandomWalk:
 
         iteration = 1
         
-        while iteration <= num_steps:
+        while iteration < num_steps:
             #initialise list of walkers that branch this iteration
             new_branches = []
             #loop over ids in walker_dict
@@ -80,16 +80,20 @@ class BranchingRandomWalk:
                     continue
                 
                 #if branching point not yet reached, jump one step
-                if w.iteration <= walker_i["branch_time"]:
+                if w.iteration < walker_i["branch_time"]:
                     angle = self.biased_angle_dist(w)
                     w.rotate(angle)
                     w.move(self.step_dist())
                     w.iteration += 1
                     walker_i["positions"].append(w.position)
                     walker_i["angles"].append(w.angle)
-                    continue
                 
-                #otherwise, kill walker and add index to list of new branches
+                #skip walkers that will not branch next iteration
+                if w.iteration < walker_i["branch_time"]:
+                    continue                
+                #what remains are walkers that are about to branch
+                #initialise child walkers now, so that they can start
+                #walking next iteration without any pause
                 walker_i["dead"] = True
                 new_branches.append(i)
                 
@@ -140,7 +144,7 @@ class BranchingRandomWalk:
         index_np = np.array([0])
         iteration_np = np.array([0])
         
-        while iteration <= num_steps:
+        while iteration < num_steps:
             new_branches = []
             #print(f"Iteration number: {iteration}")
             for i in list(walker_dict.keys()):
@@ -183,9 +187,12 @@ class BranchingRandomWalk:
                     pos_np = np.vstack([pos_np, w.position])
                     index_np = np.hstack([index_np, i])
                     iteration_np = np.hstack([iteration_np, w.iteration])
-                    continue
                 
-                #otherwise kill the walker and restart loop
+                #skip walkers that are not about to branch
+                if w.iteration < walker_i["branch_time"]:
+                    continue
+                #for the remaining walkers, initialise child branches now
+                #to prevent a 'pause' in the simulation
                 walker_i["dead"] = True
                 new_branches.append(i)
             
@@ -246,7 +253,7 @@ class BranchingRandomWalk:
         radius_squared = radius*radius
         iteration = 1
              
-        while iteration <= num_steps:
+        while iteration < num_steps:
             new_branches = []
             #print(f"Iteration number: {iteration}")
             for i in list(walker_dict.keys()):
@@ -289,9 +296,12 @@ class BranchingRandomWalk:
                     pos_np = np.vstack([pos_np, w.position])
                     index_np = np.hstack([index_np, i])
                     iteration_np = np.hstack([iteration_np, w.iteration])
-                    continue
                 
-                #otherwise kill the walker and restart loop
+                #skip walkers that are not about to branch
+                if w.iteration < walker_i["branch_time"]:
+                    continue
+                #for the remaining walkers, initialise child branches now
+                #to prevent a 'pause' in the simulation
                 walker_i["dead"] = True
                 new_branches.append(i)
             

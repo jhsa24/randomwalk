@@ -8,9 +8,9 @@ Many samples from a simulation can be run, and to save time, stored for later us
 then many graphs / analyses made from a single run of the simulation
 """
 import matplotlib.pyplot as plt
+from  matplotlib.animation import FuncAnimation
 import numpy as np
-
-from aux import mean
+import pickle
 
 class WalkData:
     def __init__(self, data, simulation = None):
@@ -105,36 +105,21 @@ class WalkData:
         self.sample_id = np.concatenate(all_sample_id)
             
     
-    def get_positions(self):
-        all_pos = []
-        for d in self.data:
-            walk_pos = [np.array(d[i]["positions"]) for i in d]
-            all_pos.append(walk_pos)
+    def save(self, filename):
+        if not filename.endswith(".pkl"):
+            filename += ".pkl"
         
-        return all_pos
-
-    def get_angles(self):
-        all_angles = []
-        for d in self.data:
-            for i in d:
-                for theta in d[i]["angles"]:
-                    all_angles.append(theta)        
-        return all_angles
-    
-    def get_somas(self):
-        all_somas = []
-        for d in self.data:
-            walk_somas = []
-            for i in d:
-                if d[i]["soma"]:
-                    walk_somas.append(d[i]["positions"][0])
-            all_somas.append(np.array(walk_somas))
+        with open("sim/" + filename, 'wb') as file:
+            pickle.dump(self, file)
         
-        return all_somas
     
     
 class Analysis:
     def __init__(self, walkdata):
+        
+        if isinstance(walkdata, str):
+            walkdata = self.load(walkdata)
+                
         self.data = walkdata.data
         
         self.iters = walkdata.iters
@@ -144,8 +129,13 @@ class Analysis:
         self.parent_id = walkdata.parent_id
         self.sample_id = walkdata.sample_id
         
-    def tmp(self, index=0):
-        pass
+  
+    def load(self, filename):
+        if not filename.endswith(".pkl"):
+            filename += ".pkl"
+            
+        with open("sim/" + filename, 'rb') as file:
+            return pickle.load(file)
     
     
     def graph_walk(self, 
@@ -267,7 +257,8 @@ class Analysis:
         list_of_averages = []
         
         for t in unique_iter:
-            num_walkers = len(self.positions[(self.iters == t) & m_sample])
+            current_pos = self.positions[(self.iters == t) & m_sample]
+            num_walkers = len(np.unique(current_pos, axis = 0))
             list_of_averages.append(num_walkers/l)
             
         plt.plot(list_of_averages)
@@ -278,6 +269,7 @@ class Analysis:
             plt.savefig("plots/" + name + ".png", dpi=300, bbox_inches='tight')
         if show: 
             plt.show()
+            
     
     def graph_angles(self, 
                      sample = None, 
@@ -299,3 +291,86 @@ class Analysis:
             plt.savefig("plots/" + name + ".png", dpi=300, bbox_inches='tight')
         if show: 
             plt.show()
+            
+    def graph_branch_lengths(self,
+                             sample = None,
+                             bin_number = None,
+                             name = None,
+                             show = True):
+   
+        if type(sample) in [float, int]:
+            sample = [sample]
+        elif sample == None:
+            sample = np.unique(self.sample_id)
+            
+        branch_lengths = [np.size(self.positions[(self.sample_id == i) & (self.branch_id == j)]) 
+                          for i in sample for j in np.unique(self.branch_id[self.sample_id == i])]
+        
+        plt.hist(branch_lengths, bins = bin_number)
+        
+        if name:
+            plt.savefig("plots/" + name + ".png", dpi=300, bbox_inches='tight')
+        if show: 
+            plt.show()    
+       
+        
+    def animate_walk(self, 
+                     sample = 0, 
+                     name = "Animation", 
+                     show_dot = True,
+                     show_line = True,
+                     lw = 0.75,
+                     m_size = 50,
+                     col = 'black',
+                     bg = 'white',
+                     m_col = 'red'):
+        
+        if not name.endswith(".mp4"):
+            name += ".mp4"
+        
+        positions = self.positions
+        x_min, x_max = positions[:,0].min(), positions[:,0].max()
+        y_min, y_max = positions[:,1].min(), positions[:,1].max()
+
+        fig, ax = plt.subplots()
+        ax.set_aspect('equal')
+        ax.set_facecolor('white')
+
+        ax.set_xlim(x_min, x_max)
+        ax.set_ylim(y_min, y_max)
+
+        branches = np.unique(self.branch_id[self.sample_id == sample])
+        lines = []
+
+        for b in branches:
+            line, = ax.plot([], [], color = col, linewidth = lw)
+            lines.append(line)
+        active_walkers_scatter = ax.scatter([], [], color = m_col, marker='o', s = m_size)
+        
+
+        def update(frame):
+            m_sample = self.sample_id == sample
+            m_iter = self.iters <= frame
+            
+            for line, b in zip(lines, branches):
+                pts = positions[(self.branch_id == b) & (m_sample) & (m_iter)]
+                
+                if show_line:
+                    if len(pts) > 0:
+                        line.set_data(pts[:,0], pts[:,1])
+                    else:
+                        line.set_data([], [])
+                
+                if show_dot:
+                    active_walkers = positions[(self.sample_id == sample) & (self.iters == frame)]
+                    active_walkers_scatter.set_offsets(active_walkers)
+            
+            return lines + [active_walkers_scatter]
+
+        ani = FuncAnimation(fig, 
+                            update, 
+                            frames = range(0, self.iters[self.sample_id == sample].max() + 30), 
+                            blit=True
+                            )
+
+        ani.save("animations/" + name, fps = 30, dpi = 300)

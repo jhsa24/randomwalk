@@ -65,13 +65,14 @@ class RandomWalk:
                         "angles" : [initial_angle],
                         "parent" : None
                         }}
+        w = walker_dict[0]["walker"]
         
-        for _ in range(num_steps+1):
-            angle = self.biased_angle_dist(self.particle)
-            self.particle.rotate(angle)
-            self.particle.move(self.step_dist())
-            walker_dict[0]["positions"].append(self.particle.position)
-            walker_dict[0]["angles"].append(self.particle.angle)
+        for _ in range(num_steps):
+            angle = self.biased_angle_dist(w)
+            w.rotate(angle)
+            w.move(self.step_dist())
+            walker_dict[0]["positions"].append(w.position)
+            walker_dict[0]["angles"].append(w.angle)
                     
         return walker_dict
     
@@ -103,7 +104,7 @@ class RandomWalk:
         radius_squared = radius*radius
         iteration = 1
        
-        while iteration <= num_steps:
+        while iteration < num_steps:
             for i in list(walker_dict.keys()):
                 walker_i = walker_dict[i]
                 w = walker_i["walker"]
