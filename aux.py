@@ -64,18 +64,23 @@ def mask_relatives(index_np, iteration_np, walker_index, walker_dict):
     w = walker_dict[walker_index]["walker"]
     if parent == None or w.iteration >= k+1:
         return np.zeros_like(index_np, dtype=bool)
-    pbt = walker_dict[parent]["branch_time"]
-    mask1 = (index_np == parent) & (iteration_np >= pbt-k)
+    #old definition of branch_length, doesn't work if p_b is a float
+    #p_len = walker_dict[parent]["branch_time"]
+    p_len = len(walker_dict[parent]["positions"])
+    mask1 = (index_np == parent) & (iteration_np >= p_len - k + w.iteration)
     
     sibling = walker_dict[walker_index]["sibling"]
     mask2 = (index_np == sibling) & (iteration_np <= k)
     
     grandparent = walker_dict[parent]["parent"]
-    if (grandparent != None) and (pbt-1 < 0):
-        gpbt = walker_dict[grandparent]["branch_time"]
-        mask3 = (index_np == grandparent) & (iteration_np >= gpbt-1)
+    if (grandparent != None) and (p_len < k):
+        gp_len = len(walker_dict[grandparent]["positions"])
+        mask3 = (index_np == grandparent) & (iteration_np >= gp_len - k + p_len + w.iteration)
         
-        return combine_masks([mask1, mask2, mask3])
+        uncle = walker_dict[parent]["sibling"]
+        mask4 = (index_np == uncle) & (iteration_np <= k)
+        
+        return combine_masks([mask1, mask2, mask3, mask4])
     return combine_masks([mask1, mask2])
 
 """
@@ -145,15 +150,39 @@ def graph_walks(nested_list, somas, lw = 0.75, col = "white", name = None):
 6: A few mathematical formulas for equation plotting
 """
 
-def i0(v, max_iterations = 1000):
-    current_sum, iterations = 0, 0
-    incomplete = True
+#integral calculator for functions such as Bessel's functions
+def integral(f, a, b, n = 100):
+    width = (b-a)/n
+    integral = 0
     
-    while incomplete:
-        nth_term = ((0.25 * v) ** iterations) / (maths.factorial(k) ** 2)
-        current_sum += nth_term
-        iterations += 1
-        if (nth_term < 1e-9) or (iterations > max_iterations):
-            incomplete = False
+    for i in range(0,n+1):
+        x = a + i * width
+        prefactor = 2
+        if (i == 0 or i ==n):
+            prefactor = 1
+        if (i -1)/2 - int((i -1)/2) == 0:
+            prefactor = 4
+        integral += prefactor * f(x)
     
-    return current_sum, iterations
+    return width/3 * integral
+
+
+def i0(v, n = 100):
+    def integrand(theta):
+        return maths.exp(v * maths.cos(theta))
+    return 1/maths.pi * integral(integrand, 0, maths.pi, n)
+
+
+def vonmis(theta, v):
+    normalisation = 2 * maths.pi * i0(v)
+    return normalisation**(-1) * np.exp(v * np.cos(theta))
+
+
+
+"""
+import scipy.special as sp
+#Evaluate the modified Bessel function of the first kind, zeroth order, at val
+val = 3
+value = sp.iv(0, val)
+print("SciPy value: ", value)
+"""

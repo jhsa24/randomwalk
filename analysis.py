@@ -50,7 +50,8 @@ class WalkData:
                     if parent is None:
                         start_times[index] = 0
                     elif parent in start_times:
-                        start_times[index] = start_times[parent] + walk[parent]["branch_time"]
+                        #start_times[index] = start_times[parent] + walk[parent]["branch_time"]
+                        start_times[index] = start_times[parent] + len(walk[parent]["positions"]) - 1
                     else:
                         incomplete = True
             
@@ -146,33 +147,31 @@ class Analysis:
                    name = None,
                    show = True):
         
-        #create arrays for masking sample
+        if iteration is None:
+            iteration = [0, float("inf")]
+        elif isinstance(iteration, (int, float)):
+            iteration = [0, iteration]
+        elif len(iteration != 2):
+            raise ValueError("Iteration must be None, Int, Float, or a [low, high] list")
+            
+        #create arrays for masking sample and iterations
         m_sample = self.sample_id == sample
-        if iteration:
-            if type(iteration) in [float, int]:
-                m_iter = self.iters <= iteration
-            elif type(iteration) in [tuple, list]:
-                m_iter = (iteration[0] <= self.iters) & (self.iters <= iteration[1])
-            else:
-                raise TypeError("Iteration must be integer or list")
-                
-        else:
-            m_iter = np.ones_like(self.iters, dtype = bool)
+        m_iter = (iteration[0] <= self.iters) & (self.iters <= iteration[1])
         
-        somas = self.positions[(self.iters == 0) & m_sample]
-        unique_branches = np.unique(self.branch_id[m_sample & m_iter])
+        mask = (m_sample) & (m_iter)
+        branch_ids = self.branch_id[mask]
+        positions = self.positions[mask]
+        
+        unique_branches = np.unique(branch_ids)
         
         for b in unique_branches:
-            pts = self.positions[(self.branch_id == b) & m_sample & m_iter]
-            x = [p[0] for p in pts]
-            y = [p[1] for p in pts]
+            pts = positions[branch_ids == b]
+            x, y = pts[:,0], pts[:,1] 
             plt.plot(x, y, color = col, linewidth = lw)
         
-        try:
-            start = iteration[0]
-        except Exception:
-            start = 0
-        if start == 0:
+        
+        if iteration[0] == 0:
+            somas = self.positions[(self.iters == 0) & m_sample]
             for soma in somas:
                 x, y = soma[0], soma[1]
                 plt.plot(x, y, color = 'red', marker = 'o', markersize = 2.5)
@@ -198,8 +197,7 @@ class Analysis:
         m_iter = self.iters == iteration
         
         current_pts = self.positions[m_sample & m_iter]
-        x = [p[0] for p in current_pts]
-        y = [p[1] for p in current_pts]
+        x, y = current_pts[:,0], current_pts[:,1]
         plt.scatter(x, y, color = col)
         
         if name:
@@ -207,32 +205,37 @@ class Analysis:
         if show: 
             plt.show()
     
-    
+            
     def graph_MSD(self, 
                   sample = None, 
                   name = None,
-                  show = True):
+                  show = True,
+                  x_log = False,
+                  y_log = False):
         
-        if sample != None:
-            if type(sample) in [float, int]:
-                sample = [sample]
-            m_sample = np.isin(self.sample_id, sample)
-        else:
-            m_sample = np.ones_like(self.sample_id, dtype = bool)
-            
-        unique_iter = np.unique(self.iters[m_sample])
+        if sample is None:
+            sample = np.unique(self.sample_id)
+        elif isinstance(sample, (int, float)):
+            sample = [sample]
+        m_sample = np.isin(self.sample_id, sample)
+        
+        iters = self.iters[m_sample]
+        positions = self.positions[m_sample]
+        distance_squared = (positions * positions).sum(axis=1)
+        
+        unique_iter = np.unique(iters)
         list_of_averages = []
 
         for t in unique_iter:
-            pos = self.positions[(self.iters == t) & m_sample]
-            distance_squared = (pos*pos).sum(axis=1)
-            
-            list_of_averages.append(np.mean(distance_squared))
+            list_of_averages.append(np.mean(distance_squared[iters == t]))
         
         plt.plot(list_of_averages)
         plt.xlabel("Number of steps")
         plt.ylabel("Mean Squared Distance")
-        
+        if x_log:
+            plt.xscale("log")
+        if y_log:
+            plt.yscale("log")
         if name:
             plt.savefig("plots/" + name + ".png", dpi=300, bbox_inches='tight')
         if show: 
@@ -244,22 +247,25 @@ class Analysis:
                              name = None,
                              show = True):
         
-        if sample != None:
-            if type(sample) in [float, int]:
-                sample = [sample]
-            m_sample = np.isin(self.sample_id, sample)
-            l = len(sample)
-        else:
-            m_sample = np.ones_like(self.sample_id, dtype = bool)
-            l = len(self.data)
+        if sample == None:
+            sample = np.unique(self.sample_id)
+        elif isinstance(sample, (float, int)):
+            sample = [sample]
+        
+        m_sample = np.isin(self.sample_id, sample)
+        
+        iters = self.iters[m_sample]
+        positions = self.positions[m_sample]
+        samples = self.sample_id[m_sample]
             
-        unique_iter = np.unique(self.iters[m_sample])
+        unique_iter = np.unique(iters)
         list_of_averages = []
         
         for t in unique_iter:
-            current_pos = self.positions[(self.iters == t) & m_sample]
-            num_walkers = len(np.unique(current_pos, axis = 0))
-            list_of_averages.append(num_walkers/l)
+            m_iter = iters == t
+            num_walkers = np.unique(positions[m_iter], axis = 0)
+            num_samples = np.unique(samples[m_iter])
+            list_of_averages.append(len(num_walkers)/len(num_samples))
             
         plt.plot(list_of_averages)
         plt.xlabel("Number of steps")
@@ -269,49 +275,63 @@ class Analysis:
             plt.savefig("plots/" + name + ".png", dpi=300, bbox_inches='tight')
         if show: 
             plt.show()
-            
     
+        
     def graph_angles(self, 
                      sample = None, 
                      bin_number = None, 
                      name = None, 
                      show = True):
         
-        if sample:
-            if type(sample) in [float, int]:
-                sample = [sample]
-            m_sample = np.isin(self.sample_id, sample)
-        else:
-            m_sample = np.ones_like(self.sample_id, dtype = bool)
+        if sample == None:
+            sample = np.unique(self.sample_id)
+        elif isinstance(sample, (float, int)):
+            sample = [sample]
+        
+        m_sample = np.isin(self.sample_id, sample)
             
         angles = self.angles[m_sample]
-        plt.hist(angles, bins = bin_number)
+        plt.hist(angles, bins = bin_number, density = True)
         
         if name:
             plt.savefig("plots/" + name + ".png", dpi=300, bbox_inches='tight')
         if show: 
             plt.show()
             
+
     def graph_branch_lengths(self,
                              sample = None,
                              bin_number = None,
                              name = None,
-                             show = True):
+                             show = True,
+                             x_log = False,
+                             y_log = False):
    
-        if type(sample) in [float, int]:
-            sample = [sample]
-        elif sample == None:
+        if sample == None:
             sample = np.unique(self.sample_id)
-            
-        branch_lengths = [np.size(self.positions[(self.sample_id == i) & (self.branch_id == j)]) 
-                          for i in sample for j in np.unique(self.branch_id[self.sample_id == i])]
+        elif isinstance(sample, (float, int)):
+            sample = [sample]
+
+        m_sample = np.isin(self.sample_id, sample)
+        sample_id = self.sample_id[m_sample]
+        branch_id = self.branch_id[m_sample]
+        
+        branch_lengths = []
+        for i in sample:
+            current_branches = branch_id[sample_id == i]
+            _, count = np.unique(current_branches, return_counts=True)
+            branch_lengths.extend(count)
         
         plt.hist(branch_lengths, bins = bin_number)
         
+        if x_log:
+            plt.xscale("log")
+        if y_log:
+            plt.yscale("log")
         if name:
             plt.savefig("plots/" + name + ".png", dpi=300, bbox_inches='tight')
         if show: 
-            plt.show()    
+            plt.show()
        
         
     def animate_walk(self, 
@@ -327,18 +347,26 @@ class Analysis:
         
         if not name.endswith(".mp4"):
             name += ".mp4"
+        buffer = 0.08
+        m_sample = self.sample_id == sample
         
-        positions = self.positions
+        positions = self.positions[m_sample]
         x_min, x_max = positions[:,0].min(), positions[:,0].max()
         y_min, y_max = positions[:,1].min(), positions[:,1].max()
 
-        fig, ax = plt.subplots()
+        fig, ax = plt.subplots(figsize=(6,6))
+        fig.subplots_adjust(left=0, bottom=0, right=1, top=1, wspace=None, hspace=None)
         ax.set_aspect('equal')
-        ax.set_facecolor('white')
-
-        ax.set_xlim(x_min, x_max)
-        ax.set_ylim(y_min, y_max)
-
+        ax.set_facecolor(bg)
+        
+        plt.gca().axes.get_xaxis().set_visible(False)
+        plt.gca().axes.get_yaxis().set_visible(False)
+        """
+        ax.set_xlim(x_min - buffer * abs(x_min), x_max + buffer * abs(x_max))
+        ax.set_ylim(y_min - buffer * abs(y_min), y_max + buffer * abs(y_max))
+        """
+        ax.set_xlim(min(x_min, y_min), max(x_max, y_max))
+        ax.set_ylim(min(x_min, y_min), max(x_max, y_max))
         branches = np.unique(self.branch_id[self.sample_id == sample])
         lines = []
 
@@ -349,11 +377,10 @@ class Analysis:
         
 
         def update(frame):
-            m_sample = self.sample_id == sample
             m_iter = self.iters <= frame
             
             for line, b in zip(lines, branches):
-                pts = positions[(self.branch_id == b) & (m_sample) & (m_iter)]
+                pts = self.positions[(self.branch_id == b) & (m_sample) & (m_iter)]
                 
                 if show_line:
                     if len(pts) > 0:
@@ -362,7 +389,7 @@ class Analysis:
                         line.set_data([], [])
                 
                 if show_dot:
-                    active_walkers = positions[(self.sample_id == sample) & (self.iters == frame)]
+                    active_walkers = self.positions[(self.sample_id == sample) & (self.iters == frame)]
                     active_walkers_scatter.set_offsets(active_walkers)
             
             return lines + [active_walkers_scatter]
@@ -372,5 +399,5 @@ class Analysis:
                             frames = range(0, self.iters[self.sample_id == sample].max() + 30), 
                             blit=True
                             )
-
+  
         ani.save("animations/" + name, fps = 30, dpi = 300)
